@@ -4,215 +4,105 @@
 #include <stdexcept>
 #include <functional>
 #include "Sequence.h"
+#include "Ordinal.h"
 
-template <typename T> class LazySequence;
+template <typename ItemType> class LazySequence;
 
-template <typename T>
+template <typename ItemType>
 struct Optional {
     bool HasValue;
-    T value;
+    ItemType value;
 
-    Optional() : HasValue(false), value(T()) {}
-    Optional(const T& val) : HasValue(true), value(val) {}
+    Optional() : HasValue(false), value(ItemType()) {}
+    Optional(const ItemType& InitialValue) : HasValue(true), value(InitialValue) {}
 };
 
-template <typename T>
+template <typename ItemType>
 class Generator {
 private:
-    Sequence<T>* owner; 
-    std::function<T(Sequence<T>*)> rule;
+    LazySequence<ItemType>* owner; 
+    std::function<ItemType(Sequence<ItemType>*)> rule;
     size_t position;
 
-    T* HistoryData;
-    size_t HistoryCount;
-    size_t MaxHistorySize;
-    int VirtualSizeDelta; 
-
-    void PushHistory(const T& item) {
-        if (MaxHistorySize == 0) return;
-        
-        if (HistoryCount >= MaxHistorySize) {
-            for (size_t index = 1; index < HistoryCount; index++) {
-                HistoryData[index - 1] = HistoryData[index];
-            }
-            HistoryData[HistoryCount - 1] = item;
-        } else {
-            HistoryData[HistoryCount] = item;
-            HistoryCount++;
-        }
-    }
-
 public:
-    Generator(Sequence<T>* OwnerSeq, std::function<T(Sequence<T>*)> RuleFunc, size_t MaxHistSize = 100) 
-        : owner(OwnerSeq), rule(std::move(RuleFunc)), position(0), 
-          HistoryCount(0), MaxHistorySize(MaxHistSize), VirtualSizeDelta(0) {
-        this->HistoryData = new T[MaxHistorySize];
-    }
+    Generator(LazySequence<ItemType>* OwnerSequence, std::function<ItemType(Sequence<ItemType>*)> RuleFunction) 
+        : owner(OwnerSequence), rule(RuleFunction), position(0) {}
 
-    Generator(const Generator<T>& other) {
-        this->owner = other.owner;
-        this->rule = other.rule;
-        this->position = other.position;
-        this->HistoryCount = other.HistoryCount;
-        this->MaxHistorySize = other.MaxHistorySize;
-        this->VirtualSizeDelta = other.VirtualSizeDelta;
+    Generator(const Generator<ItemType>& other) 
+        : owner(other.owner), rule(other.rule), position(other.position) {}
 
-        this->HistoryData = new T[this->MaxHistorySize];
-        for (size_t index = 0; index < this->HistoryCount; index++) {
-            this->HistoryData[index] = other.HistoryData[index];
-        }
-    }
+    ~Generator() = default;
 
-    ~Generator() {
-        delete[] this->HistoryData;
-    }
-
-    const T& GetNext() {
+    ItemType GetNext() {
         if (!HasNext()) {
-            throw std::out_of_range("IndexOutOfRange: Достигнут конец последовательности");
+            throw std::out_of_range("Достигнут конец последовательности генератора");
         }
-
-        T value = rule(owner); 
-        PushHistory(value);
+        ItemType GeneratedValue = rule(owner); 
         position++; 
-        return value;
+        return GeneratedValue; 
     }
 
-    bool HasNext() const {
-        if (owner->capacity.IsInfinite) return true; 
-        return position < (static_cast<size_t>(owner->GetLength()) + VirtualSizeDelta);
-    }
+    bool HasNext() const;
 
-    Optional<T> TryGetNext() {
+    Optional<ItemType> TryGetNext() {
         if (!HasNext()) {
-            return Optional<T>();
+            return Optional<ItemType>();
         }
-        return Optional<T>(GetNext());
+        return Optional<ItemType>(GetNext());
     }
 
-    Generator<T>* Append(const T& item) const {
-        Generator<T>* NextGen = new Generator<T>(*this);
-        if (this->owner->capacity.IsInfinite) {
-            return NextGen; 
-        }
+    void SetOwner(LazySequence<ItemType>* NewOwner) {
+        owner = NewOwner;
+    }
 
+    // --- Делегированные операции мутаций ---
+
+    Generator<ItemType>* Append(const ItemType& item) const {
+        Generator<ItemType>* NextGenerator = new Generator<ItemType>(*this);
+        if (this->owner->IsInfinite()) return NextGenerator; 
+        
         auto OldRule = this->rule;
-        size_t TargetPos = static_cast<size_t>(this->owner->GetLength()) + this->VirtualSizeDelta;
-        int LocalPos = static_cast<int>(this->position);
-
-        NextGen->VirtualSizeDelta++;
-        NextGen->rule = [OldRule, item, TargetPos, LocalPos](Sequence<T>* self) mutable -> T {
-            if (LocalPos == static_cast<int>(TargetPos)) {
-                LocalPos++;
+        int TargetPosition = this->owner->GetLengthOrdinal().GetCount();
+        
+        NextGenerator->rule = [OldRule, item, TargetPosition, ElementCounter = 0](Sequence<ItemType>* self) mutable -> ItemType {
+            if (ElementCounter == TargetPosition) {
+                ElementCounter++;
                 return item; 
             }
-            LocalPos++;
+            ElementCounter++;
             return OldRule(self); 
         };
-        return NextGen;
+        return NextGenerator;
     }
 
-    Generator<T>* Append(Sequence<T>* items) const {
-        Generator<T>* NextGen = new Generator<T>(*this);
-        if (this->owner->capacity.IsInfinite || items == nullptr) {
-            return NextGen;
-        }
-
+    Generator<ItemType>* InsertAt(const ItemType& item, int TargetIndex) const {
+        Generator<ItemType>* NextGenerator = new Generator<ItemType>(*this);
         auto OldRule = this->rule;
-        size_t TargetPos = static_cast<size_t>(this->owner->GetLength()) + this->VirtualSizeDelta;
-        int LocalPos = static_cast<int>(this->position);
-        int ItemsCount = items->GetLength();
-
-        NextGen->VirtualSizeDelta += ItemsCount;
-        NextGen->rule = [OldRule, items, TargetPos, LocalPos, ItemsCount](Sequence<T>* self) mutable -> T {
-            if (LocalPos >= static_cast<int>(TargetPos) && LocalPos < static_cast<int>(TargetPos) + ItemsCount) {
-                T value = items->Get(LocalPos - static_cast<int>(TargetPos));
-                LocalPos++;
-                return value;
-            }
-            LocalPos++;
-            return OldRule(self);
-        };
-        return NextGen;
-    }
-
-    Generator<T>* Insert(const T& item) const {
-        Generator<T>* NextGen = new Generator<T>(*this);
-        auto OldRule = this->rule;
-        size_t TargetPos = this->position; 
-        int LocalPos = static_cast<int>(this->position);
-
-        NextGen->VirtualSizeDelta++;
-        NextGen->rule = [OldRule, item, TargetPos, LocalPos](Sequence<T>* self) mutable -> T {
-            if (LocalPos == static_cast<int>(TargetPos)) {
-                LocalPos++;
+        
+        NextGenerator->rule = [OldRule, item, TargetIndex, ElementCounter = 0](Sequence<ItemType>* self) mutable -> ItemType {
+            if (ElementCounter == TargetIndex) {
+                ElementCounter++;
                 return item; 
             }
-            LocalPos++;
+            ElementCounter++;
             return OldRule(self); 
         };
-        return NextGen;
+        return NextGenerator;
     }
 
-    Generator<T>* Insert(Sequence<T>* items) const {
-        Generator<T>* NextGen = new Generator<T>(*this);
-        if (items == nullptr) return NextGen;
-
+    Generator<ItemType>* RemoveAt(int TargetIndex) const {
+        Generator<ItemType>* NextGenerator = new Generator<ItemType>(*this);
         auto OldRule = this->rule;
-        size_t TargetPos = this->position;
-        int LocalPos = static_cast<int>(this->position);
-        int ItemsCount = items->GetLength();
-
-        NextGen->VirtualSizeDelta += ItemsCount;
-        NextGen->rule = [OldRule, items, TargetPos, LocalPos, ItemsCount](Sequence<T>* self) mutable -> T {
-            if (LocalPos >= static_cast<int>(TargetPos) && LocalPos < static_cast<int>(TargetPos) + ItemsCount) {
-                T value = items->Get(LocalPos - static_cast<int>(TargetPos));
-                LocalPos++;
-                return value;
+        
+        NextGenerator->rule = [OldRule, TargetIndex, ElementCounter = 0](Sequence<ItemType>* self) mutable -> ItemType {
+            if (ElementCounter == TargetIndex) {
+                ElementCounter++;
+                OldRule(self); // Вычисляем и отбрасываем удаленный элемент
             }
-            LocalPos++;
+            ElementCounter++;
             return OldRule(self);
         };
-        return NextGen;
-    }
-
-    Generator<T>* Remove(const T& item) const {
-        Generator<T>* NextGen = new Generator<T>(*this);
-        auto OldRule = this->rule;
-
-        NextGen->rule = [OldRule, item](Sequence<T>* self) mutable -> T {
-            while (true) {
-                T value = OldRule(self);
-                if (!(value == item)) { 
-                    return value; 
-                }
-            }
-        };
-        return NextGen;
-    }
-
-    Generator<T>* Remove(Sequence<T>* items) const {
-        Generator<T>* NextGen = new Generator<T>(*this);
-        if (items == nullptr) return NextGen;
-
-        auto OldRule = this->rule;
-
-        NextGen->rule = [OldRule, items](Sequence<T>* self) mutable -> T {
-            while (true) {
-                T value = OldRule(self);
-                bool found = false;
-                for (int index = 0; index < items->GetLength(); index++) {
-                    if (value == items->Get(index)) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    return value;
-                }
-            }
-        };
-        return NextGen;
+        return NextGenerator;
     }
 };
 
