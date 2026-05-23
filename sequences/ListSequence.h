@@ -3,8 +3,8 @@
 
 #include <stdexcept>
 
-#include "LinkedList.h"
-#include "Sequence.h"
+#include "BaseStructures/LinkedList.h"
+#include "sequences/Sequence.h"
 
 // Абстрактный базовый класс для последовательностей на основе связного списка
 template <class T> class ListSequence : public Sequence<T> {

@@ -1,7 +1,7 @@
 #ifndef MUTABLELISTSEQUENCE_H
 #define MUTABLELISTSEQUENCE_H
 
-#include "ListSequence.h"
+#include "sequences/ListSequence.h"
 
 // Изменяемая последовательность на основе связного списка
 template <class T> class MutableListSequence : public ListSequence<T> {

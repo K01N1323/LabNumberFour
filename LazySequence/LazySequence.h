@@ -4,10 +4,10 @@
 #include <stdexcept>
 #include <functional>
 #include <utility>
-#include "Sequence.h"
-#include "MutableArraySequence.h"
-#include "Generator.h"
-#include "Ordinal.h"
+#include "sequences/Sequence.h"
+#include "sequences/MutableArraySequence.h"
+#include "Generators/Generator.h"
+#include "Ordinal/Ordinal.h"
 
 template <typename ItemType> 
 class LazySequence : public Sequence<ItemType> {

@@ -1,7 +1,7 @@
 #ifndef MUTABLEARRAYSEQUENCE_H
 #define MUTABLEARRAYSEQUENCE_H
 
-#include "ArraySequence.h"
+#include "sequences/ArraySequence.h"
 
 // Изменяемая последовательность на основе массива
 template <class T> class MutableArraySequence : public ArraySequence<T> {

@@ -1,4 +1,4 @@
-#include "BitSequence.h"
+#include "ComplexSequences/BitSequence.h"
 #include <cstring>
 
 // ===================== Bit =====================

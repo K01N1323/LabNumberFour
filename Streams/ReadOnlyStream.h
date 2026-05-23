@@ -3,10 +3,10 @@
 
 #include <string>
 #include <functional>
-#include "IStreams/IstreamSource.h"
-#include "Engines/SequenceSource.h"
-#include "Engines/FileSource.h"
-#include "Engines/StringSource.h"
+#include "Streams/IStreams/IstreamSource.h"
+#include "Streams/Engines/SequenceSource.h"
+#include "Streams/Engines/FileSource.h"
+#include "Streams/Engines/StringSource.h"
 
 template <typename ItemType>
 class ReadOnlyStream {

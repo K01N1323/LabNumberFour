@@ -5,7 +5,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <functional>
-#include "../IStreams/IstreamSource.h"
+#include "Streams/IStreams/IstreamSource.h"
 
 template <typename ItemType>
 class StringSource : public IstreamSource<ItemType> {

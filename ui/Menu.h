@@ -6,11 +6,11 @@
 #include <limits>
 #include <utility>
 #include <fstream>
-#include "LazySequence.h"
-#include "GeneratorRules.h"
+#include "LazySequence/LazySequence.h"
+#include "Generators/GeneratorRules.h"
 #include "Streams/ReadOnlyStream.h"
 #include "Streams/WriteOnlyStream.h"
-#include "AlphabeticalIndex.h"
+#include "Tasks/AlphabeticalIndex.h"
 
 class ConsoleInterface {
 private:

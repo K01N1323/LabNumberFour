@@ -3,7 +3,7 @@
 
 #include <stdexcept>
 
-#include "IEnumerator.h"
+#include "sequences/IEnumerator.h"
 
 // Шаблонный класс односвязного списка
 template <class T> class LinkedList {

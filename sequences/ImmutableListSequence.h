@@ -1,7 +1,7 @@
 #ifndef IMMUTABLELISTSEQUENCE_H
 #define IMMUTABLELISTSEQUENCE_H
 
-#include "ListSequence.h"
+#include "sequences/ListSequence.h"
 
 // Неизменяемая последовательность на основе связного списка
 template <class T> class ImmutableListSequence : public ListSequence<T> {

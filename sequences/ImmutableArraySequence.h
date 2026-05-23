@@ -1,7 +1,7 @@
 #ifndef IMMUTABLEARRAYSEQUENCE_H
 #define IMMUTABLEARRAYSEQUENCE_H
 
-#include "ArraySequence.h"
+#include "sequences/ArraySequence.h"
 
 // Неизменяемая последовательность на основе массива
 template <class T> class ImmutableArraySequence : public ArraySequence<T> {

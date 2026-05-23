@@ -2,8 +2,8 @@
 #define SEQUENCE_SOURCE_H
 
 #include <stdexcept>
-#include "../IStreams/IstreamSource.h"
-#include "../../Sequence.h" 
+#include "Streams/IStreams/IstreamSource.h"
+#include "sequences/Sequence.h" 
 
 template <typename ItemType>
 class SequenceSource : public IstreamSource<ItemType> {

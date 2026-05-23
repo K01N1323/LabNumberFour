@@ -3,8 +3,8 @@
 
 #include <stdexcept>
 
-#include "DynamicArray.h"
-#include "Sequence.h"
+#include "BaseStructures/DynamicArray.h"
+#include "sequences/Sequence.h"
 
 // Абстрактный базовый класс для последовательностей на основе массива
 template <class T> class ArraySequence : public Sequence<T> {

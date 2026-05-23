@@ -2,7 +2,7 @@
 #define GENERATOR_RULES_H
 
 #include <functional>
-#include "Sequence.h"
+#include "sequences/Sequence.h"
 
 // 1. Арифметическая прогрессия (Оставляем формулу, так как это O(1) и без рекурсии)
 inline std::function<int(Sequence<int>*)> CreateArithmeticProgression(int start, int step) {

@@ -5,7 +5,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <functional>
-#include "../IStreams/IWriteTarget.h"
+#include "Streams/IStreams/IWriteTarget.h"
 
 template <typename ItemType>
 class FileTarget : public IWriteTarget<ItemType> {

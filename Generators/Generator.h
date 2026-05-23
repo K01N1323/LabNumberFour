@@ -3,8 +3,8 @@
 
 #include <stdexcept>
 #include <functional>
-#include "Sequence.h"
-#include "Ordinal.h"
+#include "sequences/Sequence.h"
+#include "Ordinal/Ordinal.h"
 
 template <typename ItemType> class LazySequence;
 

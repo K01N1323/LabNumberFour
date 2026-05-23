@@ -1,7 +1,7 @@
 CXX = clang++
-CXXFLAGS = -std=c++17 -Wall -Ibase_structures -Isequences -Icomplex_sequences -Iui -Itests
+CXXFLAGS = -std=c++17 -Wall -I.
 
-SRCS = main.cpp ui/Menu.cpp tests/Tests.cpp complex_sequences/BitSequence.cpp
+SRCS = main.cpp ComplexSequences/BitSequence.cpp tests/Tests.cpp
 OBJS = $(SRCS:.cpp=.o)
 TARGET = main
 

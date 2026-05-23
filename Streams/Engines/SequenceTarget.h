@@ -2,8 +2,8 @@
 #define SEQUENCE_TARGET_H
 
 #include <stdexcept>
-#include "../IStreams/IWriteTarget.h"
-#include "../../Sequence.h" 
+#include "Streams/IStreams/IWriteTarget.h"
+#include "sequences/Sequence.h" 
 
 template <typename ItemType>
 class SequenceTarget : public IWriteTarget<ItemType> {

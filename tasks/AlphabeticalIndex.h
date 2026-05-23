@@ -4,10 +4,10 @@
 #include <string>
 #include <stdexcept>
 #include <cctype> // Добавлено для std::isalpha и std::tolower
-#include "Sequence.h"
-#include "MutableArraySequence.h"
+#include "sequences/Sequence.h"
+#include "sequences/MutableArraySequence.h"
 #include "Streams/ReadOnlyStream.h"
-#include "LazySequence.h"
+#include "LazySequence/LazySequence.h"
 
 struct IndexEntry {
     std::string word;

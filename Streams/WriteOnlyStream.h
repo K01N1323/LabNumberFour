@@ -3,9 +3,9 @@
 
 #include <string>
 #include <functional>
-#include "IStreams/IWriteTarget.h"
-#include "Engines/FileTarget.h"
-#include "Engines/SequenceTarget.h"
+#include "Streams/IStreams/IWriteTarget.h"
+#include "Streams/Engines/FileTarget.h"
+#include "Streams/Engines/SequenceTarget.h"
 
 template <typename ItemType>
 class WriteOnlyStream {

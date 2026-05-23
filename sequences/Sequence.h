@@ -3,7 +3,7 @@
 
 #include <stdexcept>
 
-#include "IEnumerator.h"
+#include "sequences/IEnumerator.h"
 
 // Абстрактный базовый класс для всех последовательностей
 template <class T> class Sequence {
