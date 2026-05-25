@@ -4,17 +4,18 @@
 #include <iostream>
 #include <string>
 #include <limits>
-#include <utility>
 #include <fstream>
 #include "LazySequence/LazySequence.h"
 #include "Generators/GeneratorRules.h"
 #include "Streams/ReadOnlyStream.h"
 #include "Streams/WriteOnlyStream.h"
 #include "Tasks/AlphabeticalIndex.h"
+#include "sequences/MutableArraySequence.h"
 
 class ConsoleInterface {
 private:
-    LazySequence<int>* ActiveIntegerSequence;
+    MutableArraySequence<LazySequence<int>*>* SequenceCollection;
+    int ActiveSequenceIndex;
     AlphabeticalIndex* ActiveIndex;
 
     void ClearInputBuffer() {
@@ -22,26 +23,51 @@ private:
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
 
-    void PrintSeparator() const {
-        std::cout << "\n==================================================\n";
+    void PrintCollectionStatus() {
+        if (SequenceCollection->GetLength() == 0) {
+            std::cout << "Список последовательностей пуст\n";
+            return;
+        }
+        std::cout << "Доступные последовательности:\n";
+        for (int SequenceIndex = 0; SequenceIndex < SequenceCollection->GetLength(); SequenceIndex++) {
+            std::cout << "[" << SequenceIndex << "] ";
+            if (SequenceIndex == ActiveSequenceIndex) {
+                std::cout << "(Активная) ";
+            }
+            if (SequenceCollection->Get(SequenceIndex)->IsInfinite()) {
+                std::cout << "Бесконечная последовательность\n";
+            } else {
+                std::cout << "Конечная последовательность (Длина: " << SequenceCollection->Get(SequenceIndex)->GetLength() << ")\n";
+            }
+        }
     }
 
-    // --- ПОДМЕНЮ 1: Ленивые последовательности ---
     void HandleLazySequences() {
         int SequenceChoice = -1;
         while (SequenceChoice != 0) {
-            PrintSeparator();
-            std::cout << "[ ЛЕНИВЫЕ ПОСЛЕДОВАТЕЛЬНОСТИ И АЛГЕБРА ]\n";
-            std::cout << "1. Создать Арифметическую прогрессию\n";
-            std::cout << "2. Создать Фибоначчи\n";
-            std::cout << "3. Проверить Map (Умножить элементы на 10)\n";
-            std::cout << "4. Проверить Where (Оставить только четные)\n";
-            std::cout << "5. Проверить Reduce (Сумма первых N элементов)\n";
-            std::cout << "6. Проверить Zip (Сцепить с другой прогрессией)\n";
-            std::cout << "7. Проверить GetSubsequence (Получить подсписок)\n";
-            std::cout << "8. Вывести элементы и проверить материализацию\n";
-            std::cout << "9. Проверить Concat (Конкатенация и доступ по ординалам)\n";
-            std::cout << "0. Назад\n";
+            std::cout << "\nМеню тестирования ленивых последовательностей\n\n";
+            std::cout << "Управление списком:\n";
+            std::cout << "1. Вывести список всех созданных последовательностей\n";
+            std::cout << "2. Выбрать активную последовательность по номеру\n\n";
+            std::cout << "Создание базовых последовательностей:\n";
+            std::cout << "3. Создать пустую конечную последовательность\n";
+            std::cout << "4. Создать пустую бесконечную последовательность\n";
+            std::cout << "5. Создать Арифметическую прогрессию\n";
+            std::cout << "6. Создать Фибоначчи\n";
+            std::cout << "7. Создать Простые числа\n\n";
+            std::cout << "Операции над активной последовательностью:\n";
+            std::cout << "8. Добавить элемент в конец (Append)\n";
+            std::cout << "9. Вставить элемент по индексу (InsertAt)\n";
+            std::cout << "10. Удалить элемент по индексу (RemoveAt)\n";
+            std::cout << "11. Проверить получение крайних элементов (GetFirst / GetLast)\n";
+            std::cout << "12. Проверить Map (Умножить элементы на 10)\n";
+            std::cout << "13. Проверить Where (Оставить только четные)\n";
+            std::cout << "14. Проверить Reduce (Сумма первых N элементов)\n";
+            std::cout << "15. Проверить Zip (Сцепить с другой последовательностью из списка)\n";
+            std::cout << "16. Проверить GetSubsequence (Получить подсписок)\n";
+            std::cout << "17. Вывести элементы и проверить материализацию\n";
+            std::cout << "18. Проверить Concat (Сцепить с другой последовательностью из списка)\n";
+            std::cout << "0. Назад в главное меню\n\n";
             std::cout << "Ваш выбор: ";
             std::cin >> SequenceChoice;
 
@@ -50,22 +76,156 @@ private:
             try {
                 switch (SequenceChoice) {
                     case 1: {
-                        delete ActiveIntegerSequence;
-                        ActiveIntegerSequence = new LazySequence<int>(CreateArithmeticProgression(1, 2), Ordinal::Infinite());
-                        std::cout << "Создана прогрессия: 1, 3, 5, 7...\n";
+                        PrintCollectionStatus();
                         break;
                     }
                     case 2: {
-                        delete ActiveIntegerSequence;
-                        ActiveIntegerSequence = new LazySequence<int>(CreateFibonacciSequence(), Ordinal::Infinite());
-                        std::cout << "Создана последовательность Фибоначчи: 0, 1, 1, 2, 3, 5...\n";
+                        PrintCollectionStatus();
+                        if (SequenceCollection->GetLength() > 0) {
+                            int TargetIndex;
+                            std::cout << "Введите номер последовательности для работы: ";
+                            std::cin >> TargetIndex;
+                            if (TargetIndex >= 0 && TargetIndex < SequenceCollection->GetLength()) {
+                                ActiveSequenceIndex = TargetIndex;
+                                std::cout << "Активная последовательность изменена\n";
+                            } else {
+                                std::cout << "Неверный номер\n";
+                            }
+                        }
                         break;
                     }
                     case 3: {
-                        if (!ActiveIntegerSequence) { std::cout << "Сначала создайте последовательность!\n"; break; }
-                        auto MultiplyByTen = [](const int& value) -> int { return value * 10; };
-                        LazySequence<int>* MappedSequence = ActiveIntegerSequence->Map(MultiplyByTen);
-                        std::cout << "Первые 5 элементов после Map: ";
+                        LazySequence<int>* EmptyFinite = new LazySequence<int>();
+                        SequenceCollection->Append(EmptyFinite);
+                        ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
+                        std::cout << "Пустая конечная последовательность создана и назначена активной\n";
+                        break;
+                    }
+                    case 4: {
+                        auto ThrowingRule = [](Sequence<int>* self) -> int {
+                            throw std::out_of_range("Эта бесконечная последовательность не содержит элементов по правилу");
+                        };
+                        LazySequence<int>* EmptyInfinite = new LazySequence<int>(ThrowingRule, Ordinal::Infinite());
+                        SequenceCollection->Append(EmptyInfinite);
+                        ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
+                        std::cout << "Пустая бесконечная последовательность создана и назначена активной\n";
+                        break;
+                    }
+                    case 5: {
+                        int StartValue, StepValue, IsInfiniteFlag;
+                        std::cout << "Введите начальное значение: "; std::cin >> StartValue;
+                        std::cout << "Введите шаг: "; std::cin >> StepValue;
+                        std::cout << "Сделать последовательность бесконечной? (1 - Да, 0 - Нет): "; std::cin >> IsInfiniteFlag;
+                        
+                        Ordinal SequenceCapacity;
+                        if (IsInfiniteFlag == 1) {
+                            SequenceCapacity = Ordinal::Infinite();
+                        } else {
+                            int SequenceLength;
+                            std::cout << "Введите желаемую длину последовательности: "; std::cin >> SequenceLength;
+                            SequenceCapacity = Ordinal(SequenceLength);
+                        }
+
+                        LazySequence<int>* ArithmeticSeq = new LazySequence<int>(CreateArithmeticProgression(StartValue, StepValue), SequenceCapacity);
+                        SequenceCollection->Append(ArithmeticSeq);
+                        ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
+                        std::cout << "Арифметическая прогрессия создана и назначена активной\n";
+                        break;
+                    }
+                    case 6: {
+                        int IsInfiniteFlag;
+                        std::cout << "Сделать последовательность Фибоначчи бесконечной? (1 - Да, 0 - Нет): "; std::cin >> IsInfiniteFlag;
+                        
+                        Ordinal SequenceCapacity;
+                        if (IsInfiniteFlag == 1) {
+                            SequenceCapacity = Ordinal::Infinite();
+                        } else {
+                            int SequenceLength;
+                            std::cout << "Введите желаемую длину последовательности: "; std::cin >> SequenceLength;
+                            SequenceCapacity = Ordinal(SequenceLength);
+                        }
+
+                        LazySequence<int>* FibonacciSeq = new LazySequence<int>(CreateFibonacciSequence(), SequenceCapacity);
+                        SequenceCollection->Append(FibonacciSeq);
+                        ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
+                        std::cout << "Последовательность Фибоначчи создана и назначена активной\n";
+                        break;
+                    }
+                    case 7: {
+                        int IsInfiniteFlag;
+                        std::cout << "Сделать последовательность простых чисел бесконечной? (1 - Да, 0 - Нет): "; std::cin >> IsInfiniteFlag;
+                        
+                        Ordinal SequenceCapacity;
+                        if (IsInfiniteFlag == 1) {
+                            SequenceCapacity = Ordinal::Infinite();
+                        } else {
+                            int SequenceLength;
+                            std::cout << "Введите желаемую длину последовательности: "; std::cin >> SequenceLength;
+                            SequenceCapacity = Ordinal(SequenceLength);
+                        }
+
+                        LazySequence<int>* PrimeSeq = new LazySequence<int>(CreatePrimeSequence(), SequenceCapacity);
+                        SequenceCollection->Append(PrimeSeq);
+                        ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
+                        std::cout << "Последовательность простых чисел создана и назначена активной\n";
+                        break;
+                    }
+                    case 8: {
+                        if (ActiveSequenceIndex == -1) { std::cout << "Нет активной последовательности\n"; break; }
+                        int ElementToAdd;
+                        std::cout << "Введите значение для добавления: ";
+                        std::cin >> ElementToAdd;
+                        LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
+                        Sequence<int>* MutatedSequence = CurrentSequence->Append(ElementToAdd);
+                        
+                        SequenceCollection->Append(static_cast<LazySequence<int>*>(MutatedSequence));
+                        ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
+                        std::cout << "Элемент успешно добавлен. Результат сохранен как новая активная последовательность (иммутабельность сохранена)\n";
+                        break;
+                    }
+                    case 9: {
+                        if (ActiveSequenceIndex == -1) { std::cout << "Нет активной последовательности\n"; break; }
+                        int ElementToAdd, TargetPosition;
+                        std::cout << "Введите значение: "; std::cin >> ElementToAdd;
+                        std::cout << "Введите индекс для вставки: "; std::cin >> TargetPosition;
+                        LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
+                        Sequence<int>* MutatedSequence = CurrentSequence->InsertAt(ElementToAdd, TargetPosition);
+                        
+                        SequenceCollection->Append(static_cast<LazySequence<int>*>(MutatedSequence));
+                        ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
+                        std::cout << "Элемент вставлен. Результат сохранен как новая активная последовательность\n";
+                        break;
+                    }
+                    case 10: {
+                        if (ActiveSequenceIndex == -1) { std::cout << "Нет активной последовательности\n"; break; }
+                        int TargetPosition;
+                        std::cout << "Введите индекс для удаления: "; std::cin >> TargetPosition;
+                        LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
+                        LazySequence<int>* MutatedSequence = CurrentSequence->RemoveAt(TargetPosition);
+                        
+                        SequenceCollection->Append(MutatedSequence);
+                        ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
+                        std::cout << "Элемент удален. Результат сохранен как новая активная последовательность\n";
+                        break;
+                    }
+                    case 11: {
+                        if (ActiveSequenceIndex == -1) { std::cout << "Нет активной последовательности\n"; break; }
+                        LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
+                        std::cout << "Первый элемент: " << CurrentSequence->GetFirst() << "\n";
+                        if (CurrentSequence->IsInfinite()) {
+                            std::cout << "Последовательность бесконечна, метод GetLast вызовет ошибку логики\n";
+                        } else {
+                            std::cout << "Последний элемент: " << CurrentSequence->GetLast() << "\n";
+                        }
+                        break;
+                    }
+                    case 12: {
+                        if (ActiveSequenceIndex == -1) { std::cout << "Нет активной последовательности\n"; break; }
+                        auto MultiplyByTen = [](const int& CurrentValue) -> int { return CurrentValue * 10; };
+                        LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
+                        LazySequence<int>* MappedSequence = CurrentSequence->Map<int>(MultiplyByTen);
+                        
+                        std::cout << "Первые 5 элементов после применения Map: ";
                         for (int PrintIndex = 0; PrintIndex < 5; PrintIndex++) {
                             std::cout << MappedSequence->Get(PrintIndex) << " ";
                         }
@@ -73,11 +233,13 @@ private:
                         delete MappedSequence;
                         break;
                     }
-                    case 4: {
-                        if (!ActiveIntegerSequence) { std::cout << "Сначала создайте последовательность!\n"; break; }
-                        auto IsEven = [](const int& value) -> bool { return value % 2 == 0; };
-                        LazySequence<int>* FilteredSequence = ActiveIntegerSequence->Where(IsEven);
-                        std::cout << "Первые 5 четных элементов (Генерация Where): ";
+                    case 13: {
+                        if (ActiveSequenceIndex == -1) { std::cout << "Нет активной последовательности\n"; break; }
+                        auto IsEven = [](const int& CurrentValue) -> bool { return CurrentValue % 2 == 0; };
+                        LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
+                        LazySequence<int>* FilteredSequence = CurrentSequence->Where(IsEven);
+                        
+                        std::cout << "Первые 5 четных элементов после применения Where: ";
                         for (int PrintIndex = 0; PrintIndex < 5; PrintIndex++) {
                             std::cout << FilteredSequence->Get(PrintIndex) << " ";
                         }
@@ -85,110 +247,125 @@ private:
                         delete FilteredSequence;
                         break;
                     }
-                    case 5: {
-                        if (!ActiveIntegerSequence) { std::cout << "Сначала создайте последовательность!\n"; break; }
+                    case 14: {
+                        if (ActiveSequenceIndex == -1) { std::cout << "Нет активной последовательности\n"; break; }
                         int ElementCount;
-                        std::cout << "Сколько первых элементов просуммировать (Reduce)? ";
+                        std::cout << "Сколько первых элементов просуммировать: ";
                         std::cin >> ElementCount;
                         
-                        LazySequence<int>* SubSequence = ActiveIntegerSequence->GetSubsequence(0, ElementCount - 1);
+                        LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
+                        LazySequence<int>* SubSequence = CurrentSequence->GetSubsequence(0, ElementCount - 1);
                         auto SumReducer = [](const int& AccumulatedValue, const int& CurrentValue) -> int {
                             return AccumulatedValue + CurrentValue;
                         };
                         
                         int TotalSum = SubSequence->Reduce(SumReducer, 0);
-                        std::cout << "Результат Reduce (Сумма): " << TotalSum << "\n";
+                        std::cout << "Результат свертки Reduce: " << TotalSum << "\n";
                         delete SubSequence;
                         break;
                     }
-                    case 6: {
-                        if (!ActiveIntegerSequence) { std::cout << "Сначала создайте последовательность!\n"; break; }
-                        LazySequence<int> SecondSequence(CreateArithmeticProgression(10, 10), Ordinal::Infinite());
-                        LazySequence<std::pair<int, int>>* ZippedSequence = ActiveIntegerSequence->Zip(&SecondSequence);
+                    case 15: {
+                        if (ActiveSequenceIndex == -1) { std::cout << "Нет активной последовательности\n"; break; }
+                        PrintCollectionStatus();
+                        int SecondTargetIndex;
+                        std::cout << "Выберите номер второй последовательности для Zip: ";
+                        std::cin >> SecondTargetIndex;
                         
-                        std::cout << "Первые 5 пар (Zip с прогрессией шагом 10):\n";
-                        for (int PrintIndex = 0; PrintIndex < 5; PrintIndex++) {
-                            std::pair<int, int> CurrentPair = ZippedSequence->Get(PrintIndex);
-                            std::cout << "[" << CurrentPair.first << ", " << CurrentPair.second << "] ";
+                        if (SecondTargetIndex >= 0 && SecondTargetIndex < SequenceCollection->GetLength()) {
+                            LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
+                            LazySequence<int>* SecondSequence = SequenceCollection->Get(SecondTargetIndex);
+                            
+                            auto ZippedSequence = CurrentSequence->Zip(SecondSequence);
+                            std::cout << "Первые 5 пар после применения Zip:\n";
+                            for (int PrintIndex = 0; PrintIndex < 5; PrintIndex++) {
+                                auto CurrentPair = ZippedSequence->Get(PrintIndex);
+                                std::cout << CurrentPair.first << " и " << CurrentPair.second << "\n";
+                            }
+                            delete ZippedSequence;
+                        } else {
+                            std::cout << "Неверный номер\n";
                         }
-                        std::cout << "\n";
-                        delete ZippedSequence;
                         break;
                     }
-                    case 7: {
-                        if (!ActiveIntegerSequence) { std::cout << "Сначала создайте последовательность!\n"; break; }
+                    case 16: {
+                        if (ActiveSequenceIndex == -1) { std::cout << "Нет активной последовательности\n"; break; }
                         int StartIndex, EndIndex;
                         std::cout << "Начальный индекс: "; std::cin >> StartIndex;
                         std::cout << "Конечный индекс: "; std::cin >> EndIndex;
                         
-                        LazySequence<int>* SubSequence = ActiveIntegerSequence->GetSubsequence(StartIndex, EndIndex);
-                        std::cout << "Подсписок: ";
-                        for (int PrintIndex = 0; PrintIndex < SubSequence->GetLength(); PrintIndex++) {
-                            std::cout << SubSequence->Get(PrintIndex) << " ";
-                        }
-                        std::cout << "\n";
-                        delete SubSequence;
+                        LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
+                        LazySequence<int>* SubSequence = CurrentSequence->GetSubsequence(StartIndex, EndIndex);
+                        
+                        SequenceCollection->Append(SubSequence);
+                        ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
+                        std::cout << "Подсписок извлечен и сохранен как новая активная последовательность\n";
                         break;
                     }
-                    case 8: {
-                        if (!ActiveIntegerSequence) { std::cout << "Сначала создайте последовательность!\n"; break; }
+                    case 17: {
+                        if (ActiveSequenceIndex == -1) { std::cout << "Нет активной последовательности\n"; break; }
                         int PrintCount;
-                        std::cout << "Сколько элементов вывести? "; std::cin >> PrintCount;
+                        std::cout << "Сколько элементов вывести на экран: "; std::cin >> PrintCount;
+                        LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
                         for (int PrintIndex = 0; PrintIndex < PrintCount; PrintIndex++) {
-                            std::cout << ActiveIntegerSequence->Get(PrintIndex) << " ";
+                            std::cout << CurrentSequence->Get(PrintIndex) << " ";
                         }
-                        std::cout << "\nМатериализовано в кэше: " << ActiveIntegerSequence->GetMaterializedCount() << "\n";
+                        std::cout << "\nКоличество материализованных элементов в кэше: " << CurrentSequence->GetMaterializedCount() << "\n";
                         break;
                     }
-                    case 9: { // ТЕСТ КОНКАТЕНАЦИИ
-                        if (!ActiveIntegerSequence) { std::cout << "Сначала создайте первую последовательность!\n"; break; }
+                    case 18: { 
+                        if (ActiveSequenceIndex == -1) { std::cout << "Нет активной последовательности\n"; break; }
+                        PrintCollectionStatus();
+                        int SecondTargetIndex;
+                        std::cout << "Выберите номер второй последовательности для Concat: ";
+                        std::cin >> SecondTargetIndex;
                         
-                        std::cout << "Первая последовательность (Чанк 0) - активная.\n";
+                        if (SecondTargetIndex >= 0 && SecondTargetIndex < SequenceCollection->GetLength()) {
+                            LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
+                            LazySequence<int>* SecondSequence = SequenceCollection->Get(SecondTargetIndex);
+                            
+                            LazySequence<int>* ConcatenatedSequence = static_cast<LazySequence<int>*>(CurrentSequence->Concat(SecondSequence));
+                            SequenceCollection->Append(ConcatenatedSequence);
+                            ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
+                            
+                            std::cout << "Последовательности объединены. Результат сохранен как новая активная последовательность\n";
+                            
+                            int ChunkDelta, LocalIndex;
+                            std::cout << "Введите дельту для чанка проверки: ";
+                            std::cin >> ChunkDelta;
+                            std::cout << "Введите локальный индекс в выбранном чанке: ";
+                            std::cin >> LocalIndex;
 
-                        std::cout << "Создаем вторую последовательность (Чанк 1: числа 99, 88, 77)...\n";
-                        int ArrayValues[] = {99, 88, 77};
-                        LazySequence<int> SecondSequence(ArrayValues, 3);
-
-                        std::cout << "Выполняем Concat...\n";
-                        LazySequence<int>* ConcatenatedSequence = ActiveIntegerSequence->Concat(&SecondSequence);
-
-                        int ChunkDelta, LocalIndex;
-                        std::cout << "Введите дельту (номер чанка, например 0 или 1): ";
-                        std::cin >> ChunkDelta;
-                        std::cout << "Введите локальный индекс в чанке: ";
-                        std::cin >> LocalIndex;
-
-                        try {
-                            int ResultValue = ConcatenatedSequence->Get(Ordinal(ChunkDelta, LocalIndex));
-                            std::cout << "Результат по ординалу (" << ChunkDelta << ", " << LocalIndex << "): " << ResultValue << "\n";
-                        } catch (const std::exception& ErrorMessage) {
-                            std::cout << "ОШИБКА ДОСТУПА ПО ОРДИНАЛУ: " << ErrorMessage.what() << "\n";
+                            try {
+                                int ResultValue = ConcatenatedSequence->Get(Ordinal(ChunkDelta, LocalIndex));
+                                std::cout << "Значение по ординалу " << ChunkDelta << " и индексу " << LocalIndex << " составляет: " << ResultValue << "\n";
+                            } catch (const std::exception& ErrorMessage) {
+                                std::cout << "Ошибка доступа по ординалу: " << ErrorMessage.what() << "\n";
+                            }
+                        } else {
+                            std::cout << "Неверный номер\n";
                         }
-                        
-                        delete ConcatenatedSequence;
                         break;
                     }
                     case 0: break;
-                    default: std::cout << "Неизвестная команда.\n";
+                    default: std::cout << "Команда не распознана\n";
                 }
             } catch (const std::exception& ErrorMessage) {
-                std::cout << "ОШИБКА: " << ErrorMessage.what() << "\n";
+                std::cout << "Произошла ошибка: " << ErrorMessage.what() << "\n";
             }
         }
     }
 
-    // --- ПОДМЕНЮ 2: Тестирование потоков (Streams) ---
     void HandleStreams() {
         int StreamChoice = -1;
         while (StreamChoice != 0) {
-            PrintSeparator();
-            std::cout << "[ ТЕСТИРОВАНИЕ ПОТОКОВ (READ / WRITE STREAMS) ]\n";
+            std::cout << "\nМеню тестирования системы потоков\n\n";
             std::cout << "1. Записать элементы в файл (FileTarget)\n";
             std::cout << "2. Прочитать элементы из файла (FileSource)\n";
             std::cout << "3. Прочитать строку (StringSource)\n";
-            std::cout << "4. Прочитать из ленивой последовательности (ReadOnlyStream поверх Sequence)\n";
-            std::cout << "5. Записать в динамический массив (WriteOnlyStream поверх Sequence)\n";
-            std::cout << "0. Назад\n";
+            std::cout << "4. Проверить перемещение каретки (Seek) в строке\n";
+            std::cout << "5. Прочитать из ленивой последовательности (ReadOnlyStream)\n";
+            std::cout << "6. Записать в динамический массив (WriteOnlyStream)\n";
+            std::cout << "0. Назад в главное меню\n\n";
             std::cout << "Ваш выбор: ";
             std::cin >> StreamChoice;
 
@@ -198,32 +375,32 @@ private:
                 switch (StreamChoice) {
                     case 1: {
                         std::string OutputFileName = "test_stream_output.txt";
-                        auto IntegerSerializer = [](const int& value) -> std::string { return std::to_string(value); };
+                        auto IntegerSerializer = [](const int& CurrentValue) -> std::string { return std::to_string(CurrentValue); };
                         
                         WriteOnlyStream<int> FileTargetStream(OutputFileName.c_str(), IntegerSerializer);
                         FileTargetStream.Open();
                         
-                        std::cout << "Пишем числа 100, 200, 300 в файл...\n";
+                        std::cout << "Запись значений 100, 200, 300 в файл\n";
                         FileTargetStream.Write(100);
                         FileTargetStream.Write(200);
                         FileTargetStream.Write(300);
                         
                         FileTargetStream.Close();
-                        std::cout << "Успешно записано в " << OutputFileName << "\n";
+                        std::cout << "Данные успешно сохранены в файл\n";
                         break;
                     }
                     case 2: {
                         std::string InputFileName = "test_stream_output.txt";
-                        auto IntegerDeserializer = [](const std::string& text) -> int { return std::stoi(text); };
+                        auto IntegerDeserializer = [](const std::string& ParsedText) -> int { return std::stoi(ParsedText); };
                         
                         ReadOnlyStream<int> FileSourceStream(InputFileName.c_str(), IntegerDeserializer);
                         FileSourceStream.Open();
                         
-                        std::cout << "Читаем из файла " << InputFileName << ":\n";
+                        std::cout << "Чтение данных из файла:\n";
                         while (!FileSourceStream.IsEndOfStream()) {
                             try {
                                 int ReadValue = FileSourceStream.Read();
-                                std::cout << "Прочитано: " << ReadValue << " (Позиция: " << FileSourceStream.GetPosition() << ")\n";
+                                std::cout << "Получено значение: " << ReadValue << " на позиции " << FileSourceStream.GetPosition() << "\n";
                             } catch (const std::out_of_range&) {
                                 break;
                             }
@@ -234,82 +411,88 @@ private:
                     case 3: {
                         ClearInputBuffer();
                         std::string InputText;
-                        std::cout << "Введите строку чисел через пробел: ";
+                        std::cout << "Введите строку чисел разделенных пробелом: ";
                         std::getline(std::cin, InputText);
                         
-                        auto IntegerDeserializer = [](const std::string& text) -> int { return std::stoi(text); };
+                        auto IntegerDeserializer = [](const std::string& ParsedText) -> int { return std::stoi(ParsedText); };
                         ReadOnlyStream<int> StringSourceStream(InputText, IntegerDeserializer);
                         
-                        std::cout << "Читаем через StringSource:\n";
+                        std::cout << "Чтение значений из строкового потока:\n";
                         while (!StringSourceStream.IsEndOfStream()) {
                             try {
                                 int ReadValue = StringSourceStream.Read();
-                                std::cout << "Значение: " << ReadValue << "\n";
+                                std::cout << "Считано значение: " << ReadValue << "\n";
                             } catch (const std::out_of_range&) {
                                 break;
                             }
                         }
                         break;
                     }
-                    case 4: { 
-                        if (!ActiveIntegerSequence) { std::cout << "Создайте последовательность в первом меню!\n"; break; }
+                    case 4: {
+                        std::string TestText = "11 22 33 44 55";
+                        auto IntegerDeserializer = [](const std::string& ParsedText) -> int { return std::stoi(ParsedText); };
+                        ReadOnlyStream<int> StringSeekStream(TestText, IntegerDeserializer);
                         
-                        std::cout << "Оборачиваем текущую ленивую последовательность в ReadOnlyStream...\n";
-                        ReadOnlyStream<int> SequenceReadStream(ActiveIntegerSequence);
+                        std::cout << "Исходная строка для теста каретки: " << TestText << "\n";
+                        std::cout << "Перемещаем каретку на индекс 3\n";
+                        StringSeekStream.Seek(3);
+                        std::cout << "Прочитанное значение должно быть 44. Фактическое значение: " << StringSeekStream.Read() << "\n";
+                        break;
+                    }
+                    case 5: { 
+                        if (ActiveSequenceIndex == -1) { std::cout << "Необходимо создать последовательность в первом меню\n"; break; }
+                        
+                        LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
+                        ReadOnlyStream<int> SequenceReadStream(CurrentSequence);
                         SequenceReadStream.Open();
                         
                         int ElementsToRead;
-                        std::cout << "Сколько элементов прочитать из потока? ";
+                        std::cout << "Количество элементов для чтения из потока: ";
                         std::cin >> ElementsToRead;
 
                         for (int ReadIndex = 0; ReadIndex < ElementsToRead; ReadIndex++) {
                             if (SequenceReadStream.IsEndOfStream()) break;
-                            std::cout << "Поток прочитал: " << SequenceReadStream.Read() 
-                                      << " (Позиция каретки: " << SequenceReadStream.GetPosition() << ")\n";
+                            std::cout << "Прочитано потоком: " << SequenceReadStream.Read() << " текущая позиция " << SequenceReadStream.GetPosition() << "\n";
                         }
                         SequenceReadStream.Close();
                         break;
                     }
-                    case 5: { 
-                        std::cout << "Создаем пустой MutableArraySequence...\n";
-                        MutableArraySequence<int> DynamicArray;
-                        
-                        std::cout << "Оборачиваем его в WriteOnlyStream...\n";
-                        WriteOnlyStream<int> SequenceWriteStream(&DynamicArray);
+                    case 6: { 
+                        MutableArraySequence<int> DynamicTargetArray;
+                        WriteOnlyStream<int> SequenceWriteStream(&DynamicTargetArray);
                         SequenceWriteStream.Open();
 
-                        std::cout << "Пишем значения 77, 88, 99 через поток...\n";
+                        std::cout << "Передача значений 77, 88, 99 через абстракцию потока\n";
                         SequenceWriteStream.Write(77);
                         SequenceWriteStream.Write(88);
                         SequenceWriteStream.Write(99);
                         SequenceWriteStream.Close();
 
-                        std::cout << "Проверяем содержимое исходного MutableArraySequence: ";
-                        for (int ArrayElementIndex = 0; ArrayElementIndex < DynamicArray.GetLength(); ArrayElementIndex++) {
-                            std::cout << DynamicArray.Get(ArrayElementIndex) << " ";
+                        std::cout << "Проверка состояния базового массива: ";
+                        for (int ArrayElementIndex = 0; ArrayElementIndex < DynamicTargetArray.GetLength(); ArrayElementIndex++) {
+                            std::cout << DynamicTargetArray.Get(ArrayElementIndex) << " ";
                         }
                         std::cout << "\n";
                         break;
                     }
                     case 0: break;
-                    default: std::cout << "Неизвестная команда.\n";
+                    default: std::cout << "Команда не распознана\n";
                 }
             } catch (const std::exception& ErrorMessage) {
-                std::cout << "ОШИБКА: " << ErrorMessage.what() << "\n";
+                std::cout << "Произошла ошибка: " << ErrorMessage.what() << "\n";
             }
         }
     }
 
-    // --- ПОДМЕНЮ 3: Алфавитный указатель ---
     void HandleAlphabeticalIndex() {
         int IndexChoice = -1;
         while (IndexChoice != 0) {
-            PrintSeparator();
-            std::cout << "[ АЛФАВИТНЫЙ УКАЗАТЕЛЬ ]\n";
-            std::cout << "1. Построить индекс из консольного ввода (StringStream)\n";
-            std::cout << "2. Построить индекс из текстового файла (FileStream)\n";
-            std::cout << "3. Вывести текущий алфавитный указатель\n";
-            std::cout << "0. Назад\n";
+            std::cout << "\nМеню тестирования алфавитного указателя\n\n";
+            std::cout << "1. Построить указатель из консольного ввода\n";
+            std::cout << "2. Построить указатель из текстового файла\n";
+            std::cout << "3. Построить указатель из ленивой последовательности\n";
+            std::cout << "4. Вывести текущий алфавитный указатель на экран\n";
+            std::cout << "0. Назад в главное меню\n\n";
             std::cout << "Ваш выбор: ";
             std::cin >> IndexChoice;
 
@@ -320,29 +503,29 @@ private:
                     case 1: {
                         ClearInputBuffer();
                         std::string InputText;
-                        std::cout << "Введите текст для индексации: ";
+                        std::cout << "Введите текст для построения индекса: ";
                         std::getline(std::cin, InputText);
                         
-                        auto StringDeserializer = [](const std::string& word) -> std::string { return word; };
+                        auto StringDeserializer = [](const std::string& ParsedWord) -> std::string { return ParsedWord; };
                         ReadOnlyStream<std::string> StringStreamSource(InputText, StringDeserializer);
                         
                         delete ActiveIndex;
                         ActiveIndex = new AlphabeticalIndex();
                         ActiveIndex->BuildFromStream(&StringStreamSource);
-                        std::cout << "Индекс успешно построен!\n";
+                        std::cout << "Алфавитный указатель успешно построен\n";
                         break;
                     }
                     case 2: {
                         ClearInputBuffer();
-                        std::string FileName;
-                        std::cout << "Введите имя файла (например, document.txt): ";
-                        std::getline(std::cin, FileName);
+                        std::string TargetFileName;
+                        std::cout << "Укажите имя файла: ";
+                        std::getline(std::cin, TargetFileName);
                         
-                        std::ofstream TestFile(FileName, std::ios::app);
+                        std::ofstream TestFile(TargetFileName, std::ios::app);
                         TestFile.close();
 
-                        auto StringDeserializer = [](const std::string& word) -> std::string { return word; };
-                        ReadOnlyStream<std::string> FileStreamSource(FileName.c_str(), StringDeserializer);
+                        auto StringDeserializer = [](const std::string& ParsedWord) -> std::string { return ParsedWord; };
+                        ReadOnlyStream<std::string> FileStreamSource(TargetFileName.c_str(), StringDeserializer);
                         FileStreamSource.Open();
 
                         delete ActiveIndex;
@@ -350,55 +533,70 @@ private:
                         ActiveIndex->BuildFromStream(&FileStreamSource);
                         
                         FileStreamSource.Close();
-                        std::cout << "Индекс успешно построен из файла!\n";
+                        std::cout << "Алфавитный указатель построен на основе файла\n";
                         break;
                     }
                     case 3: {
-                        if (!ActiveIndex) { std::cout << "Индекс еще не построен!\n"; break; }
+                        std::string ArrayValues[] = {"apple", "banana", "apple", "cherry"};
+                        LazySequence<std::string> StringLazySequence(ArrayValues, 4);
+
+                        delete ActiveIndex;
+                        ActiveIndex = new AlphabeticalIndex();
+                        ActiveIndex->BuildFromLazySequence(&StringLazySequence);
+                        
+                        std::cout << "Алфавитный указатель построен на основе ленивой последовательности\n";
+                        break;
+                    }
+                    case 4: {
+                        if (!ActiveIndex) { std::cout << "Указатель не содержит данных\n"; break; }
                         int UniqueWordsCount = ActiveIndex->GetUniqueWordsCount();
-                        std::cout << "Уникальных слов: " << UniqueWordsCount << "\n";
+                        std::cout << "Найдено уникальных слов: " << UniqueWordsCount << "\n";
                         for (int WordIndex = 0; WordIndex < UniqueWordsCount; WordIndex++) {
                             const IndexEntry* CurrentEntry = ActiveIndex->GetEntryAt(WordIndex);
-                            std::cout << CurrentEntry->word << " -> позиции в потоке: [ ";
+                            std::cout << CurrentEntry->word << " зафиксировано на позициях: ";
                             for (int PositionIndex = 0; PositionIndex < CurrentEntry->positions->GetLength(); PositionIndex++) {
                                 std::cout << CurrentEntry->positions->Get(PositionIndex) << " ";
                             }
-                            std::cout << "]\n";
+                            std::cout << "\n";
                         }
                         break;
                     }
                     case 0: break;
-                    default: std::cout << "Неизвестная команда.\n";
+                    default: std::cout << "Команда не распознана\n";
                 }
             } catch (const std::exception& ErrorMessage) {
-                std::cout << "ОШИБКА: " << ErrorMessage.what() << "\n";
+                std::cout << "Произошла ошибка: " << ErrorMessage.what() << "\n";
             }
         }
     }
 
 public:
-    ConsoleInterface() : ActiveIntegerSequence(nullptr), ActiveIndex(nullptr) {}
+    ConsoleInterface() : ActiveSequenceIndex(-1), ActiveIndex(nullptr) {
+        SequenceCollection = new MutableArraySequence<LazySequence<int>*>();
+    }
 
     ~ConsoleInterface() {
-        delete ActiveIntegerSequence;
+        for (int SequenceIndex = 0; SequenceIndex < SequenceCollection->GetLength(); SequenceIndex++) {
+            delete SequenceCollection->Get(SequenceIndex);
+        }
+        delete SequenceCollection;
         delete ActiveIndex;
     }
 
     void Run() {
         int MainChoice = -1;
         while (MainChoice != 0) {
-            PrintSeparator();
-            std::cout << "ГЛАВНОЕ МЕНЮ ЛАБОРАТОРНОЙ РАБОТЫ №4\n";
+            std::cout << "\nГлавное меню лабораторной работы\n\n";
             std::cout << "1. Тестирование ленивых последовательностей и алгебры\n";
-            std::cout << "2. Тестирование потоков (ReadOnly / WriteOnly Streams)\n";
-            std::cout << "3. Тестирование Алфавитного Указателя\n";
-            std::cout << "0. Выход\n";
+            std::cout << "2. Тестирование системы потоков\n";
+            std::cout << "3. Тестирование алгоритма алфавитного указателя\n";
+            std::cout << "0. Завершить выполнение\n\n";
             std::cout << "Ваш выбор: ";
             std::cin >> MainChoice;
 
             if (std::cin.fail()) {
                 ClearInputBuffer();
-                std::cout << "Ошибка ввода. Введите число.\n";
+                std::cout << "Введено некорректное значение. Ожидается число\n";
                 continue;
             }
 
@@ -406,8 +604,8 @@ public:
                 case 1: HandleLazySequences(); break;
                 case 2: HandleStreams(); break;
                 case 3: HandleAlphabeticalIndex(); break;
-                case 0: std::cout << "Завершение работы.\n"; break;
-                default: std::cout << "Неверный пункт меню.\n";
+                case 0: std::cout << "Работа программы завершена\n"; break;
+                default: std::cout << "Введен неверный пункт меню\n";
             }
         }
     }

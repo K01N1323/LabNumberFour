@@ -4,7 +4,7 @@
 #include <functional>
 #include "sequences/Sequence.h"
 
-// 1. Арифметическая прогрессия (Оставляем формулу, так как это O(1) и без рекурсии)
+// арифм прогрессия 
 inline std::function<int(Sequence<int>*)> CreateArithmeticProgression(int start, int step) {
     return [start, step, LocalPosition = 0](Sequence<int>* self) mutable -> int {
         int NextValue = start + LocalPosition * step;
@@ -13,7 +13,7 @@ inline std::function<int(Sequence<int>*)> CreateArithmeticProgression(int start,
     };
 }
 
-// 2. Геометрическая прогрессия (Используем рекуррентное обращение к self)
+// геом. прогессия 
 inline std::function<int(Sequence<int>*)> CreateGeometricProgression(int start, int multiplier) {
     return [start, multiplier, LocalPosition = 0](Sequence<int>* self) mutable -> int {
         if (LocalPosition == 0) {
@@ -21,14 +21,13 @@ inline std::function<int(Sequence<int>*)> CreateGeometricProgression(int start, 
             return start;
         }
         
-        // Берем предыдущий элемент из кэша и умножаем
         int NextValue = self->Get(LocalPosition - 1) * multiplier;
         LocalPosition++;
         return NextValue;
     };
 }
 
-// 3. Числа Фибоначчи (Идеальный пример для мемоизации!)
+// фибоначчи
 inline std::function<int(Sequence<int>*)> CreateFibonacciSequence() {
     return [LocalPosition = 0](Sequence<int>* self) mutable -> int {
         if (LocalPosition == 0) {
@@ -40,24 +39,23 @@ inline std::function<int(Sequence<int>*)> CreateFibonacciSequence() {
             return 1;
         }
         
-        // Берем уже вычисленные и закэшированные значения из самой последовательности
         int NextValue = self->Get(LocalPosition - 1) + self->Get(LocalPosition - 2);
         LocalPosition++;
         return NextValue;
     };
 }
 
-// 4. Простые числа (Оптимизация: делим только на уже найденные простые числа)
+// простые числа
 inline std::function<int(Sequence<int>*)> CreatePrimeSequence() {
     return [CurrentCandidate = 2, LocalPosition = 0](Sequence<int>* self) mutable -> int {
         while (true) {
             bool IsPrime = true;
             
-            // Проверяем делимость только на ранее сгенерированные простые числа
+            // проверка только на ранее полученных числах
             for (int CheckIndex = 0; CheckIndex < LocalPosition; CheckIndex++) {
                 int PreviousPrime = self->Get(CheckIndex);
                 
-                // Оптимизация: проверяем только до корня из CurrentCandidate
+     
                 if (PreviousPrime * PreviousPrime > CurrentCandidate) {
                     break; 
                 }

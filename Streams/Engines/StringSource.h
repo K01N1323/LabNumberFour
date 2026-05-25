@@ -11,18 +11,20 @@ template <typename ItemType>
 class StringSource : public IstreamSource<ItemType> {
 private:
     std::string StringData;
-    std::stringstream InputStream;
+    mutable std::stringstream InputStream;
     std::function<ItemType(const std::string&)> DeserializerFunction;
     size_t CurrentPosition;
 
 public:
-    StringSource(const std::string& DataInput, std::function<ItemType(const std::string&)> Deserializer)
-        : StringData(DataInput), InputStream(DataInput), DeserializerFunction(Deserializer), CurrentPosition(0) {}
+    StringSource(const std::string& DataInput, std::function<ItemType(const std::string&)> Deserializer): StringData(DataInput), InputStream(DataInput), DeserializerFunction(Deserializer), CurrentPosition(0) {}
 
     void Open() override {}
     void Close() override {}
     
-    bool IsEndOfStream() const override { return InputStream.eof(); }
+    bool IsEndOfStream() const override { 
+        InputStream >> std::ws; // Пропускаем пробельные символы
+        return InputStream.eof() || (InputStream.peek() == std::char_traits<char>::to_int_type(EOF)); 
+    }
 
     ItemType Read() override {
         if (IsEndOfStream()) throw std::out_of_range("Достигнут конец строки");

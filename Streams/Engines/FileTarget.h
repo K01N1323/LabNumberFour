@@ -16,19 +16,21 @@ private:
     size_t CurrentPosition;
 
 public:
-    FileTarget(const std::string& FileName, std::function<std::string(const ItemType&)> Serializer)
-        : TargetFileName(FileName), SerializerFunction(Serializer), CurrentPosition(0) {}
+    FileTarget(const std::string& FileName, std::function<std::string(const ItemType&)> Serializer): TargetFileName(FileName), SerializerFunction(Serializer), CurrentPosition(0) {}
 
     void Open() override {
         if (!OutputFileStream.is_open()) {
-            OutputFileStream.open(TargetFileName, std::ios::app); 
-            if (!OutputFileStream.is_open()) throw std::runtime_error("Не удалось открыть файл для записи");
+            OutputFileStream.open(TargetFileName, std::ios::out | std::ios::trunc); 
+            if (!OutputFileStream.is_open()) throw std::runtime_error("Не удалось открыть файл для записи: " + TargetFileName);
         }
     }
 
     void Close() override {
-        if (OutputFileStream.is_open()) OutputFileStream.close();
-    }
+        if (OutputFileStream.is_open()) {
+            OutputFileStream.flush();
+            OutputFileStream.close();
+         
+    }}
 
     size_t Write(const ItemType& item) override {
         if (!OutputFileStream.is_open()) throw std::logic_error("Поток не открыт");

@@ -3,7 +3,7 @@
 
 #include <string>
 #include <stdexcept>
-#include <cctype> // Добавлено для std::isalpha и std::tolower
+#include <cctype> 
 #include "sequences/Sequence.h"
 #include "sequences/MutableArraySequence.h"
 #include "Streams/ReadOnlyStream.h"
@@ -21,7 +21,7 @@ struct IndexEntry {
         positions = new MutableArraySequence<size_t>(*other.positions);
     }
 
-    // ИСПРАВЛЕНИЕ: Добавлен оператор присваивания (Rule of Three)
+   
     IndexEntry& operator=(const IndexEntry& other) {
         if (this != &other) {
             word = other.word;
@@ -39,7 +39,7 @@ struct IndexEntry {
 class AlphabeticalIndex {
 private:
     MutableArraySequence<IndexEntry*>* entries;
-
+    // найти нужную позицию
     int FindInsertPosition(const std::string& TargetWord) const {
         int LeftIndex = 0;
         int RightIndex = entries->GetLength() - 1;
@@ -60,11 +60,11 @@ private:
         return LeftIndex; 
     }
 
-    // ИСПРАВЛЕНИЕ: Логика вынесена в отдельный метод для переиспользования
+    // вставить по нужной позиции
     void ProcessAndInsertWord(const std::string& RawWord, size_t CurrentPosition) {
         std::string CleanWord = "";
         
-        // ИСПРАВЛЕНИЕ: Замена однобуквенной переменной 'c'
+
         for (char ReadCharacter : RawWord) {
             if (std::isalpha(ReadCharacter)) {
                 CleanWord += std::tolower(ReadCharacter);
@@ -101,7 +101,7 @@ public:
         delete entries;
     }
 
-    // Чтение из потока
+    // строим по потоку 
     void BuildFromStream(ReadOnlyStream<std::string>* InputStream) {
         while (!InputStream->IsEndOfStream()) {
             std::string ReadWord;
@@ -114,8 +114,7 @@ public:
             ProcessAndInsertWord(ReadWord, CurrentPosition);
         }
     }
-
-    // ИСПРАВЛЕНИЕ: Добавлено чтение из ленивого списка согласно ТЗ
+    // строим по lazyseq
     void BuildFromLazySequence(LazySequence<std::string>* InputSequence) {
         if (InputSequence->IsInfinite()) {
             throw std::logic_error("Невозможно построить полный индекс для бесконечной последовательности");
@@ -124,15 +123,15 @@ public:
         int SequenceLength = InputSequence->GetLength();
         for (int ElementIndex = 0; ElementIndex < SequenceLength; ElementIndex++) {
             std::string ReadWord = InputSequence->Get(ElementIndex);
-            // Индекс элемента в последовательности выступает в роли позиции
+     
             ProcessAndInsertWord(ReadWord, static_cast<size_t>(ElementIndex)); 
         }
     }
-
+    // уник. слова
     int GetUniqueWordsCount() const {
         return entries->GetLength();
     }
-
+    // конкретное слово 
     const IndexEntry* GetEntryAt(int TargetIndex) const {
         if (TargetIndex < 0 || TargetIndex >= entries->GetLength()) {
             throw std::out_of_range("Индекс выходит за границы");

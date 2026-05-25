@@ -5,24 +5,23 @@
 #include <fstream>
 #include <stdexcept>
 #include <functional>
-#include "Streams/IStreams/IstreamSource.h"
+#include "../IStreams/IstreamSource.h"
 
 template <typename ItemType>
 class FileSource : public IstreamSource<ItemType> {
 private:
     std::string TargetFileName;
-    std::ifstream InputFileStream;
+    mutable std::ifstream InputFileStream;
     std::function<ItemType(const std::string&)> DeserializerFunction;
     size_t CurrentPosition;
 
 public:
-    FileSource(const std::string& FileName, std::function<ItemType(const std::string&)> Deserializer)
-        : TargetFileName(FileName), DeserializerFunction(Deserializer), CurrentPosition(0) {}
+    FileSource(const std::string& FileName, std::function<ItemType(const std::string&)> Deserializer): TargetFileName(FileName), DeserializerFunction(Deserializer), CurrentPosition(0) {}
 
     void Open() override {
         if (!InputFileStream.is_open()) {
-            InputFileStream.open(TargetFileName);
-            if (!InputFileStream.is_open()) throw std::runtime_error("Не удалось открыть файл для чтения");
+            InputFileStream.open(TargetFileName, std::ios::in);
+            if (!InputFileStream.is_open()) throw std::runtime_error("Не удалось открыть файл для чтения: " + TargetFileName);
         }
     }
 
@@ -30,7 +29,11 @@ public:
         if (InputFileStream.is_open()) InputFileStream.close();
     }
 
-    bool IsEndOfStream() const override { return InputFileStream.eof(); }
+    bool IsEndOfStream() const override { 
+        if (!InputFileStream.is_open()) return true;
+        InputFileStream >> std::ws; // Пропускаем пробельные символы
+        return InputFileStream.eof() || (InputFileStream.peek() == std::char_traits<char>::to_int_type(EOF)); 
+    }
 
     ItemType Read() override {
         if (!InputFileStream.is_open()) throw std::logic_error("Поток не открыт");
@@ -51,14 +54,12 @@ public:
     size_t Seek(size_t TargetIndex) override {
         if (!InputFileStream.is_open()) throw std::logic_error("Поток не открыт");
         InputFileStream.clear();
-        InputFileStream.seekg(0, std::ios::beg);
-        CurrentPosition = 0;
         
-        std::string DummyLine;
-        for (size_t SkipIndex = 0; SkipIndex < TargetIndex; SkipIndex++) {
-            if (!std::getline(InputFileStream, DummyLine)) throw std::out_of_range("Индекс выходит за границы");
-            CurrentPosition++;
-        }
+        // за о(1) тк seekg делает смещение в байтах
+        InputFileStream.seekg(TargetIndex, std::ios::beg);
+        if (InputFileStream.fail()) throw std::out_of_range("Смещение выходит за границы файла");
+        
+        CurrentPosition = TargetIndex;
         return CurrentPosition;
     }
 

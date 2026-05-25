@@ -20,7 +20,7 @@ public:
 
         if (items == nullptr) {
             for (int element = 0; element < size; element++) {
-                this->items[element] = T(0);
+                this->items[element] = T();
             }
         } else {
             for (int element = 0; element < size; element++) {
