@@ -46,7 +46,7 @@ void TestGeneratorRules() {
     ASSERT_TEST(PrimeSequence.Get(0) == 2, "Простые числа: первый элемент равен 2");
     ASSERT_TEST(PrimeSequence.Get(7) == 19, "Простые числа: восьмой элемент равен 19");
 
-    // ДОБАВЛЕНО: Тестирование конечных генераторов напрямую
+    
     auto FiniteFibonacciRule = CreateFibonacciSequence();
     LazySequence<int> FiniteFibonacciSequence(FiniteFibonacciRule, Ordinal(5));
     ASSERT_TEST(FiniteFibonacciSequence.GetLength() == 5, "Фибоначчи конечная: длина равна 5");
@@ -68,7 +68,7 @@ void TestLazySequence() {
     ASSERT_TEST(BaseSequence.IsInfinite() == true, "Проверка флага бесконечности");
     ASSERT_TEST(BaseSequence.GetFirst() == 1, "Получение первого элемента");
 
-    LazySequence<int>* SubSequence = BaseSequence.GetSubsequence(0, 4); 
+    LazySequence<int>* SubSequence = static_cast<LazySequence<int>*>(BaseSequence.GetSubsequence(0, 4));
     ASSERT_TEST(SubSequence->GetLength() == 5, "Длина извлеченного подсписка равна 5");
     ASSERT_TEST(SubSequence->Get(0) == 1, "Первый элемент подписка равен 1");
     ASSERT_TEST(SubSequence->GetLast() == 5, "Последний элемент подсписка равен 5");

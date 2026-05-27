@@ -76,7 +76,9 @@ public:
         Generator<ItemType>* NextGenerator = new Generator<ItemType>(*this);
         NextGenerator->position = 0;
         
-        if (this->owner->IsInfinite()) return NextGenerator; 
+        if (this->owner->IsInfinite()){if (this->owner->IsInfinite()) {
+            throw std::logic_error("append для бесконечных последовательностей выпонляется на уровне LazySequence");
+        }}
         
         auto OriginalSeq = this->owner;               
         int TargetPosition = OriginalSeq->GetLengthOrdinal().GetCount(); 

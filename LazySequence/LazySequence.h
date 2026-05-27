@@ -3,7 +3,6 @@
 
 #include <stdexcept>
 #include <functional>
-#include <utility>
 #include "sequences/Sequence.h"
 #include "sequences/MutableArraySequence.h"
 #include "Generators/Generator.h"
@@ -16,7 +15,7 @@ struct Pair {
 
     Pair() : first(FirstType()), second(SecondType()) {}
 
-    Pair(const FirstType& firstValue, const SecondType& secondValue) : first(firstValue), second(secondValue) {}
+    Pair(const FirstType& FirstValue, const SecondType& SecondValue) : first(FirstValue), second(SecondValue) {}
 
     bool operator==(const Pair& other) const {
         return first == other.first && second == other.second;
@@ -62,7 +61,7 @@ public:
 
    LazySequence() : cache(new MutableArraySequence<ItemType>()), capacity(Ordinal(0, 0)) {
         auto EmptyRule = [](Sequence<ItemType>* self) -> ItemType {
-            throw std::out_of_range("Базовая пустая последовательность не содержит элементов");
+            throw std::out_of_range("Для данной последовательности еще нет генератора");
         };
         this->generator = new Generator<ItemType>(this, EmptyRule);
         
@@ -135,30 +134,24 @@ public:
             int TargetInfinities = TargetOrdinal.omega;
             int RemainingIndex = TargetOrdinal.index;
 
-            for (int i = 0; i < ChunkList->GetLength(); i++) {
-                LazySequence<ItemType>* CurrentChunk = ChunkList->Get(i);
+            for (int index = 0; index < ChunkList->GetLength(); index++) {
+                LazySequence<ItemType>* CurrentChunk = ChunkList->Get(index);
 
                 if (TargetInfinities == 0) {
-                    
                     if (CurrentChunk->IsInfinite()) {
-                     
                         return CurrentChunk->Get(Ordinal(0, RemainingIndex));
                     } else {
-                       
                         int ChunkLength = CurrentChunk->GetLength();
                         if (RemainingIndex < ChunkLength) {
                             return CurrentChunk->Get(Ordinal(0, RemainingIndex));
                         } else {
-                         
                             RemainingIndex -= ChunkLength;
                         }
                     }
                 } else {
-               
                     if (CurrentChunk->IsInfinite()) {
                         TargetInfinities--;
                     }
-               
                 }
             }
             throw std::out_of_range("Ординал выходит за границы склеенной последовательности");
@@ -184,7 +177,7 @@ public:
     const ItemType& GetFirst() const override { return this->Get(Ordinal(0, 0)); }
 
     const ItemType& GetLast() const override {
-        if (IsInfinite()) throw std::logic_error("Нельзя получить последний элемент бесконечной структуры");
+        if (IsInfinite()) throw std::logic_error("Нельзя получить последний элемент бесконечной последовательности");
         if (generator == nullptr && cache == nullptr) { 
             LazySequence<ItemType>* LastChunk = ChunkList->Get(ChunkList->GetLength() - 1);
             return LastChunk->Get(Ordinal(0, LastChunk->GetLengthOrdinal().GetCount() - 1));
@@ -192,8 +185,6 @@ public:
         if (capacity.GetCount() == 0) throw std::out_of_range("Последовательность пуста");
         return this->Get(Ordinal(0, capacity.GetCount() - 1));
     }
-
-    // методы которые нужно было реализовать из sequence
 
     Sequence<ItemType>* Instance() override { return this; }
 
@@ -211,7 +202,6 @@ public:
 
             bool HasNext() const override {
                 if (TargetSequence->IsInfinite()) return true;
-                
                 int FlatIndex = CurrentPosition.index; 
                 return FlatIndex < TargetSequence->GetLength();
             }
@@ -226,7 +216,7 @@ public:
         };
         return new LazyEnumerator(this);
     }
-
+  
     Sequence<ItemType>* Concat(Sequence<ItemType>* list) override {
         LazySequence<ItemType>* OtherLazy = dynamic_cast<LazySequence<ItemType>*>(list);
         if (OtherLazy) {
@@ -234,14 +224,12 @@ public:
         }
         
         auto ConcatRule = [this, list, LocalPosition = 0](Sequence<ItemType>* self) mutable -> ItemType {
-            // если конечная и вышли за пределы
             if (!this->IsInfinite() && LocalPosition >= this->capacity.GetCount()) {
                 int OffsetIndex = this->capacity.GetCount();
                 ItemType FetchedValue = list->Get(LocalPosition - OffsetIndex);
                 LocalPosition++;
                 return FetchedValue;
             } else {
-                // если первая последовательность бесконечна или не вышли еще за пределы
                 ItemType FetchedValue = this->Get(LocalPosition);
                 LocalPosition++;
                 return FetchedValue;
@@ -251,8 +239,6 @@ public:
         Ordinal NewCapacity = this->IsInfinite() ? Ordinal::Infinite() : Ordinal(this->capacity.GetCount() + list->GetLength());
         return new LazySequence<ItemType>(ConcatRule, NewCapacity);
     }
-
-    // ленивая конкатинация
 
     LazySequence<ItemType>* ConcatLazy(LazySequence<ItemType>* OtherSequence) const {
         MutableArraySequence<LazySequence<ItemType>*>* NewChunkList = new MutableArraySequence<LazySequence<ItemType>*>();
@@ -268,27 +254,38 @@ public:
     }
 
     Sequence<ItemType>* Append(const ItemType& item) override {
-        if (generator == nullptr) throw std::logic_error("Мутации возможны только на базовых последовательностях");
-        Generator<ItemType>* NextGenerator = generator->Append(item);
-        Ordinal NewCapacity = capacity.IsInfinite() ? Ordinal::Infinite() : Ordinal(capacity.GetCount() + 1);
-        return new LazySequence<ItemType>(NextGenerator, NewCapacity);
+        if (generator != nullptr && !capacity.IsInfinite()) {
+            Generator<ItemType>* NextGenerator = generator->Append(item);
+            Ordinal NewCapacity = Ordinal(capacity.GetCount() + 1);
+            return new LazySequence<ItemType>(NextGenerator, NewCapacity);
+        } 
+        else {
+            ItemType SingleArray[1] = {item};
+            LazySequence<ItemType>* SingleElementSeq = new LazySequence<ItemType>(SingleArray, 1);
+            return this->ConcatLazy(SingleElementSeq);
+        }
     }
 
     Sequence<ItemType>* InsertAt(const ItemType& item, int TargetIndex) override {
         if (!capacity.IsInfinite() && TargetIndex > capacity.GetCount()) throw std::out_of_range("Индекс выходит за границы");
-        if (generator == nullptr) throw std::logic_error("Мутации возможны только на базовых последовательностях");
-        Generator<ItemType>* NextGenerator = generator->InsertAt(item, TargetIndex);
-        Ordinal NewCapacity = capacity.IsInfinite() ? Ordinal::Infinite() : Ordinal(capacity.GetCount() + 1);
-        return new LazySequence<ItemType>(NextGenerator, NewCapacity);
+
+        if (generator != nullptr) {
+            Generator<ItemType>* NextGenerator = generator->InsertAt(item, TargetIndex);
+            Ordinal NewCapacity = capacity.IsInfinite() ? Ordinal::Infinite() : Ordinal(capacity.GetCount() + 1);
+            return new LazySequence<ItemType>(NextGenerator, NewCapacity);
+        } 
+        else {
+            ItemType SingleArray[1] = {item};
+            LazySequence<ItemType>* SingleElementSeq = new LazySequence<ItemType>(SingleArray, 1);
+            return this->InsertSequenceAt(SingleElementSeq, TargetIndex);
+        }
     }
 
-    
     LazySequence<ItemType>* InsertSequenceAt(LazySequence<ItemType>* InsertedSeq, int TargetIndex) const {
         if (!capacity.IsInfinite() && TargetIndex > capacity.GetCount()) {
             throw std::out_of_range("Индекс выходит за границы исходной последовательности");
         }
 
-        // голова
         auto HeadRule = [this, LocalPosition = 0](Sequence<ItemType>* self) mutable -> ItemType {
             ItemType FetchedValue = this->Get(LocalPosition);
             LocalPosition++;
@@ -296,7 +293,6 @@ public:
         };
         LazySequence<ItemType>* HeadSeq = new LazySequence<ItemType>(HeadRule, Ordinal(TargetIndex));
 
-        // хвост
         auto TailRule = [this, TargetIndex, LocalPosition = 0](Sequence<ItemType>* self) mutable -> ItemType {
             ItemType FetchedValue = this->Get(TargetIndex + LocalPosition);
             LocalPosition++;
@@ -305,28 +301,45 @@ public:
         Ordinal TailCapacity = this->IsInfinite() ? Ordinal::Infinite() : Ordinal(this->capacity.GetCount() - TargetIndex);
         LazySequence<ItemType>* TailSeq = new LazySequence<ItemType>(TailRule, TailCapacity);
 
-        // поэтапно конкатим 3 последовательности
         LazySequence<ItemType>* Step1 = HeadSeq->ConcatLazy(InsertedSeq);
-        LazySequence<ItemType>* FinalResult = Step1->ConcatLazy(TailSeq);
-
-        return FinalResult;
+        return Step1->ConcatLazy(TailSeq);
     }
 
     Sequence<ItemType>* Prepend(const ItemType& item) override { 
         return InsertAt(item, 0); 
     }
 
+    
     LazySequence<ItemType>* RemoveAt(int TargetIndex) {
         if (!capacity.IsInfinite() && TargetIndex >= capacity.GetCount()) throw std::out_of_range("Индекс выходит за границы");
-        if (generator == nullptr) throw std::logic_error("Мутации возможны только на базовых последовательностях");
-        Generator<ItemType>* NextGenerator = generator->RemoveAt(TargetIndex);
-        Ordinal NewCapacity = capacity.IsInfinite() ? Ordinal::Infinite() : Ordinal(capacity.GetCount() - 1);
-        return new LazySequence<ItemType>(NextGenerator, NewCapacity);
+
+        if (generator != nullptr) {
+            Generator<ItemType>* NextGenerator = generator->RemoveAt(TargetIndex);
+            Ordinal NewCapacity = capacity.IsInfinite() ? Ordinal::Infinite() : Ordinal(capacity.GetCount() - 1);
+            return new LazySequence<ItemType>(NextGenerator, NewCapacity);
+        } 
+        else {
+            auto HeadRule = [this, LocalPosition = 0](Sequence<ItemType>* self) mutable -> ItemType {
+                ItemType FetchedValue = this->Get(LocalPosition);
+                LocalPosition++;
+                return FetchedValue;
+            };
+            LazySequence<ItemType>* HeadSeq = new LazySequence<ItemType>(HeadRule, Ordinal(TargetIndex));
+
+            auto TailRule = [this, TargetIndex, LocalPosition = 0](Sequence<ItemType>* self) mutable -> ItemType {
+                ItemType FetchedValue = this->Get(TargetIndex + 1 + LocalPosition);
+                LocalPosition++;
+                return FetchedValue;
+            };
+            Ordinal TailCapacity = this->IsInfinite() ? Ordinal::Infinite() : Ordinal(this->capacity.GetCount() - TargetIndex - 1);
+            LazySequence<ItemType>* TailSeq = new LazySequence<ItemType>(TailRule, TailCapacity);
+
+            return HeadSeq->ConcatLazy(TailSeq);
+        }
     }
 
-    // функ. алгебра
-
-    LazySequence<ItemType>* GetSubsequence(int StartIndex, int EndIndex) const override {
+    // функ. алгебра 
+    Sequence<ItemType>* GetSubsequence(int StartIndex, int EndIndex) const override {
         auto SubSequenceRule = [this, StartIndex, LocalPosition = 0](Sequence<ItemType>* self) mutable -> ItemType {
             ItemType RetrievableValue = this->Get(StartIndex + LocalPosition);
             LocalPosition++;
@@ -380,6 +393,9 @@ public:
         };
         return new LazySequence<Pair<ItemType, OtherItemType>>(ZipRule, this->capacity);
     }
+
+  
+  
 };
 
 #endif // LAZY_SEQUENCE_H

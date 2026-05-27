@@ -71,7 +71,7 @@ private:
             }
         }
 
-        if (CleanWord.empty()) return;
+        if (CleanWord.empty()) throw std::logic_error("Переданное выражение не сожержит букв");
 
         int TargetIndex = FindInsertPosition(CleanWord);
 

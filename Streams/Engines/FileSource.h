@@ -21,7 +21,7 @@ public:
     void Open() override {
         if (!InputFileStream.is_open()) {
             InputFileStream.open(TargetFileName, std::ios::in);
-            if (!InputFileStream.is_open()) throw std::runtime_error("Не удалось открыть файл для чтения: " + TargetFileName);
+            if (!InputFileStream.is_open()) throw std::runtime_error("Не удалось открыть файл для чтения:" + TargetFileName);
         }
     }
 

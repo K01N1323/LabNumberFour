@@ -254,7 +254,7 @@ private:
                         std::cin >> ElementCount;
                         
                         LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
-                        LazySequence<int>* SubSequence = CurrentSequence->GetSubsequence(0, ElementCount - 1);
+                        LazySequence<int>* SubSequence = static_cast<LazySequence<int>*>(CurrentSequence->GetSubsequence(0, ElementCount - 1));
                         auto SumReducer = [](const int& AccumulatedValue, const int& CurrentValue) -> int {
                             return AccumulatedValue + CurrentValue;
                         };
@@ -294,7 +294,7 @@ private:
                         std::cout << "Конечный индекс: "; std::cin >> EndIndex;
                         
                         LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
-                        LazySequence<int>* SubSequence = CurrentSequence->GetSubsequence(StartIndex, EndIndex);
+                        LazySequence<int>* SubSequence = static_cast<LazySequence<int>*>(CurrentSequence->GetSubsequence(StartIndex, EndIndex));
                         
                         SequenceCollection->Append(SubSequence);
                         ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
@@ -586,11 +586,11 @@ public:
     void Run() {
         int MainChoice = -1;
         while (MainChoice != 0) {
-            std::cout << "\nГлавное меню лабораторной работы\n\n";
+            std::cout << "\nГлавное меню лабораторной работы\n";
             std::cout << "1. Тестирование ленивых последовательностей и алгебры\n";
             std::cout << "2. Тестирование системы потоков\n";
             std::cout << "3. Тестирование алгоритма алфавитного указателя\n";
-            std::cout << "0. Завершить выполнение\n\n";
+            std::cout << "0. Завершить выполнение\n";
             std::cout << "Ваш выбор: ";
             std::cin >> MainChoice;
 

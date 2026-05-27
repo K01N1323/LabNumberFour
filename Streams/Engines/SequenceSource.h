@@ -43,7 +43,7 @@ public:
     
     size_t Seek(size_t TargetIndex) override {
         if (!IsInfiniteSequence && TargetIndex >= KnownLength) {
-            throw std::out_of_range("Невозможно перейти на эту позицию");
+            throw std::out_of_range("Невозможно перейти на эту позицию, она находится вне ленивой последовательности");
         }
         CurrentPosition = TargetIndex;
         return CurrentPosition;
