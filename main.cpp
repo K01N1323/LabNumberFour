@@ -30,7 +30,6 @@ int main() {
                 break;
             }
             case 0:
-                std::cout << "Выход из программы...\n";
                 break;
             default:
                 std::cout << "Неверный выбор. Попробуйте снова.\n";

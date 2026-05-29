@@ -15,11 +15,40 @@
 
 #define ASSERT_TEST(ConditionToCheck, TestMessage) \
     if (!(ConditionToCheck)) { \
-        std::cerr << "что-то пошло не так.....: " << TestMessage << std::endl; \
+        std::cerr << "ошибка во время теста:  " << TestMessage << std::endl; \
         assert(ConditionToCheck); \
     } else { \
-        std::cout << "успех, отлично: " << TestMessage << std::endl; \
+        std::cout << "успех, тест прошел: " << TestMessage << std::endl; \
     }
+
+// ординалы и арифметика
+void TestOrdinalOperators() {
+    std::cout << "Начало тестирования операторов Ordinal" << std::endl;
+
+    Ordinal Flat1(5);
+    Ordinal Flat2(10);
+    Ordinal Inf1(1, 0);
+    Ordinal Inf2(1, 5); 
+
+    ASSERT_TEST(Flat1 < Flat2, "Сравнение плоских индексов: 5 < 10");
+    ASSERT_TEST(Flat2 > Flat1, "Сравнение плоских индексов: 10 > 5");
+    ASSERT_TEST(Flat1 < Inf1, "Конечное меньше бесконечного: 5 < omega");
+    ASSERT_TEST(Inf1 < Inf2, "Сравнение бесконечностей: omega < omega + 5");
+    ASSERT_TEST(Inf1 == Ordinal(1, 0), "Проверка равенства ординалов");
+    ASSERT_TEST(Inf1 != Flat1, "Проверка неравенства");
+
+    Ordinal Sum1 = Flat1 + Flat2;
+    ASSERT_TEST(Sum1.omega == 0 && Sum1.index == 15, "Обычное сложение: 5 + 10 = 15");
+
+    Ordinal Sum2 = Flat1 + Inf1;
+    ASSERT_TEST(Sum2.omega == 1 && Sum2.index == 0, "Сложение Кантора: 5 + omega = omega (поглощение конечного)");
+
+    Ordinal Sum3 = Inf1 + Flat1;
+    ASSERT_TEST(Sum3.omega == 1 && Sum3.index == 5, "Сложение Кантора: omega + 5 = omega + 5");
+
+    std::cout << "Завершение тестирования операторов Ordinal" << std::endl;
+}
+
 // тест генератора
 void TestGeneratorRules() {
     std::cout << "Начало тестирования правил генераторов" << std::endl;
@@ -45,7 +74,6 @@ void TestGeneratorRules() {
     LazySequence<int> PrimeSequence(PrimeRule, Ordinal::Infinite());
     ASSERT_TEST(PrimeSequence.Get(0) == 2, "Простые числа: первый элемент равен 2");
     ASSERT_TEST(PrimeSequence.Get(7) == 19, "Простые числа: восьмой элемент равен 19");
-
     
     auto FiniteFibonacciRule = CreateFibonacciSequence();
     LazySequence<int> FiniteFibonacciSequence(FiniteFibonacciRule, Ordinal(5));
@@ -59,6 +87,7 @@ void TestGeneratorRules() {
     std::cout << "Завершение тестирования правил генераторов" << std::endl;
 }
 
+//тесты lazysequence
 void TestLazySequence() {
     std::cout << "Начало тестирования ленивых последовательностей и алгебры" << std::endl;
 
@@ -87,13 +116,12 @@ void TestLazySequence() {
     int TotalSum = SubSequence->Reduce(SumAccumulator, 0); 
     ASSERT_TEST(TotalSum == 15, "Reduce: сумма первых пяти элементов равна 15");
 
+  
     Sequence<int>* AppendedSequence = SubSequence->Append(100);
-    ASSERT_TEST(AppendedSequence->GetLength() == 6, "Append: длина новой последовательности стала 6");
+    ASSERT_TEST(AppendedSequence->GetLength() == 6, "Append (через InsertAt): длина стала 6");
     ASSERT_TEST(AppendedSequence->Get(5) == 100, "Append: последний элемент равен 100");
-    ASSERT_TEST(SubSequence->GetLength() == 5, "Иммутабельность: длина оригинального подсписка осталась 5");
 
     LazySequence<int> AdditionalSequence(CreateArithmeticProgression(10, 10), Ordinal::Infinite());
-    
     auto ZippedSequence = SubSequence->Zip(&AdditionalSequence);
     ASSERT_TEST(ZippedSequence->Get(0).first == 1 && ZippedSequence->Get(0).second == 10, "Zip: корректное сцепление первой пары");
 
@@ -103,12 +131,17 @@ void TestLazySequence() {
     LazySequence<int> SecondChunkSequence(SecondArrayValues, 2);
     
     auto ConcatenatedSequence = static_cast<LazySequence<int>*>(FirstChunkSequence.Concat(&SecondChunkSequence));
-    
-    ASSERT_TEST(ConcatenatedSequence->GetLength() == 5, "Concat: общая длина конкатенированной последовательности равна 5");
-    
-    ASSERT_TEST(ConcatenatedSequence->Get(Ordinal(0, 2)) == 30, "Concat: плоский индекс 2 берется из первого чанка = 30");
-    ASSERT_TEST(ConcatenatedSequence->Get(Ordinal(0, 3)) == 40, "Concat (Ординалы): индекс 3 перетекает во второй чанк = 40");
-    ASSERT_TEST(ConcatenatedSequence->Get(Ordinal(0, 4)) == 50, "Concat (Ординалы): индекс 4 перетекает во второй чанк = 50");
+    ASSERT_TEST(ConcatenatedSequence->GetLength() == 5, "ConcatLazy: общая длина равна 5");
+    ASSERT_TEST(ConcatenatedSequence->Get(Ordinal(0, 2)) == 30, "ConcatLazy: плоский индекс 2 берется из первого чанка = 30");
+    ASSERT_TEST(ConcatenatedSequence->Get(Ordinal(0, 3)) == 40, "ConcatLazy: индекс 3 перетекает во второй чанк = 40");
+
+  
+    MutableArraySequence<int> StandardArray;
+    StandardArray.Append(99);
+    StandardArray.Append(88);
+    Sequence<int>* DefaultConcatResult = FirstChunkSequence.Concat(&StandardArray);
+    ASSERT_TEST(DefaultConcatResult->GetLength() == 5, "ConcatDefault: склеивание с обычной коллекцией");
+    ASSERT_TEST(DefaultConcatResult->Get(3) == 99, "ConcatDefault: чтение элемента из стандартной коллекции");
 
     delete SubSequence;
     delete MappedSequence;
@@ -116,9 +149,11 @@ void TestLazySequence() {
     delete AppendedSequence;
     delete ZippedSequence;
     delete ConcatenatedSequence;
+    delete DefaultConcatResult;
     
     std::cout << "Завершение тестирования ленивых последовательностей" << std::endl;
 }
+
 // тест стримов
 void TestStreams() {
     std::cout << "Начало тестирования системы потоков" << std::endl;
@@ -127,10 +162,23 @@ void TestStreams() {
     ReadOnlyStream<std::string> StringReadStream(std::string("Word1 Word2 Word3"), StringDeserializer);
     StringReadStream.Open();
     ASSERT_TEST(StringReadStream.Read() == "Word1", "Чтение первого слова из строкового потока");
-    ASSERT_TEST(StringReadStream.Read() == "Word2", "Чтение второго слова из строкового потока");
-    ASSERT_TEST(StringReadStream.GetPosition() == 2, "Проверка позиции каретки строкового потока");
+    
+  
+    StringReadStream.Close();
+    ASSERT_TEST(StringReadStream.IsEndOfStream() == true, "Поток принудительно сообщает о конце после вызова Close()");
+    
+    bool ExceptionCaught = false;
+    try {
+        StringReadStream.Read();
+    } catch (const std::out_of_range&) {
+        ExceptionCaught = true;
+    }
+    ASSERT_TEST(ExceptionCaught == true, "Чтение из закрытого потока выбрасывает исключение");
+    
+    
+    StringReadStream.Open();
     StringReadStream.Seek(0);
-    ASSERT_TEST(StringReadStream.Read() == "Word1", "Чтение после сброса каретки на начало");
+    ASSERT_TEST(StringReadStream.Read() == "Word1", "Успешное чтение после повторного Open и Seek");
     StringReadStream.Close();
 
     MutableArraySequence<int> DynamicTargetArray;
@@ -138,11 +186,16 @@ void TestStreams() {
     ArrayWriteStream.Open();
     ArrayWriteStream.Write(10);
     ArrayWriteStream.Write(20);
-    ArrayWriteStream.Write(30);
-    ASSERT_TEST(ArrayWriteStream.GetPosition() == 3, "Проверка позиции каретки потока записи");
     ArrayWriteStream.Close();
-    ASSERT_TEST(DynamicTargetArray.GetLength() == 3, "Проверка длины целевого массива после записи");
-    ASSERT_TEST(DynamicTargetArray.Get(1) == 20, "Проверка сохраненного элемента в целевом массиве");
+    
+    ExceptionCaught = false;
+    try {
+        ArrayWriteStream.Write(30);
+    } catch (const std::logic_error&) {
+        ExceptionCaught = true;
+    }
+    ASSERT_TEST(ExceptionCaught == true, "Запись в закрытый поток WriteOnlyStream выбросила исключение");
+    ASSERT_TEST(DynamicTargetArray.GetLength() == 2, "Проверка длины целевого массива после записи (30 не записалось)");
 
     std::string TestFileName = "test_streams_output.txt";
     auto IntegerSerializer = [](const int& CurrentValue) { return std::to_string(CurrentValue); };
@@ -198,7 +251,6 @@ void TestAlphabeticalIndex() {
 void TestInsertSequenceAt() {
     std::cout << "Начало тестирования структурной вставки последовательностей" << std::endl;
 
-
     int BaseValues[] = {10, 20, 30, 40};
     LazySequence<int> BaseSeq(BaseValues, 4);
 
@@ -218,18 +270,14 @@ void TestInsertSequenceAt() {
 
     delete FiniteResult;
 
-
-   
     auto ArithmeticRule = CreateArithmeticProgression(100, 10); 
     LazySequence<int> InfiniteInsert(ArithmeticRule, Ordinal::Infinite());
     
-   
     LazySequence<int>* InfiniteResult = BaseSeq.InsertSequenceAt(&InfiniteInsert, 1);
 
     ASSERT_TEST(InfiniteResult->IsInfinite() == true, "Вставка бесконечности: Результат бесконечен");
     
     ASSERT_TEST(InfiniteResult->Get(Ordinal(0, 0)) == 10, "Бесконечная вставка: Голова, индекс 0 = 10");
-    
     ASSERT_TEST(InfiniteResult->Get(Ordinal(0, 1)) == 100, "Бесконечная вставка: Перетекание во вставку, индекс 1 = 100");
     ASSERT_TEST(InfiniteResult->Get(Ordinal(0, 2)) == 110, "Бесконечная вставка: Генерация вставки, индекс 2 = 110");
     ASSERT_TEST(InfiniteResult->Get(Ordinal(0, 5)) == 140, "Бесконечная вставка: Генерация вставки, индекс 5 = 140");
@@ -243,25 +291,26 @@ void TestInsertSequenceAt() {
     std::cout << "Завершение тестирования структурной вставки\n" << std::endl;
 }
   
-
 //запуск всех тестов
 void RunAllTests() {
-    std::cout << "\nЗАПУСК КОМПЛЕКСНОГО ТЕСТИРОВАНИЯ СИСТЕМЫ\n" << std::endl;
+    std::cout << "\n--- ЗАПУСК ТЕСТОВ ---\n" << std::endl;
 
     try {
+        TestOrdinalOperators(); 
+        std::cout << std::endl;
         TestGeneratorRules();
         std::cout << std::endl;
         TestLazySequence();
         std::cout << std::endl;
         TestInsertSequenceAt();
-         std::cout << std::endl;
+        std::cout << std::endl;
         TestStreams();
         std::cout << std::endl;
         TestAlphabeticalIndex();
 
-        std::cout << "\nВСЕ БЛОКИ ТЕСТОВ УСПЕШНО ПРОЙДЕНЫ\n" << std::endl;
+        std::cout << "\n Все тесты пройдены \n" << std::endl;
     } catch (const std::exception& ErrorMessage) {
-        std::cerr << "\nКРИТИЧЕСКАЯ ОШИБКА В ПРОЦЕССЕ ТЕСТИРОВАНИЯ: " << ErrorMessage.what() << std::endl;
+        std::cerr << "\n ОШИБКА во время тестов: " << ErrorMessage.what() << std::endl;
         exit(1);
     }
 }

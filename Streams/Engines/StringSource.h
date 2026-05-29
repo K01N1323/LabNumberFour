@@ -2,7 +2,7 @@
 #define STRING_SOURCE_H
 
 #include <string>
-#include <sstream>
+#include <sstream> 
 #include <stdexcept>
 #include <functional>
 #include "Streams/IStreams/IstreamSource.h"
@@ -14,20 +14,30 @@ private:
     mutable std::stringstream InputStream;
     std::function<ItemType(const std::string&)> DeserializerFunction;
     size_t CurrentPosition;
+    bool IsClosedFlag;
 
 public:
-    StringSource(const std::string& DataInput, std::function<ItemType(const std::string&)> Deserializer): StringData(DataInput), InputStream(DataInput), DeserializerFunction(Deserializer), CurrentPosition(0) {}
+    StringSource(const std::string& DataInput, std::function<ItemType(const std::string&)> Deserializer)
+        : StringData(DataInput), InputStream(DataInput), DeserializerFunction(Deserializer), CurrentPosition(0), IsClosedFlag(false) {}
 
-    void Open() override {}
-    void Close() override {}
+    void Open() override {
+        IsClosedFlag = false;
+    }
+
+    void Close() override {
+        IsClosedFlag = true;
+    }
     
     bool IsEndOfStream() const override { 
-        InputStream >> std::ws; // Пропускаем пробельные символы
+        if (IsClosedFlag) return true; 
+        
+        InputStream >> std::ws; 
         return InputStream.eof() || (InputStream.peek() == std::char_traits<char>::to_int_type(EOF)); 
     }
 
     ItemType Read() override {
-        if (IsEndOfStream()) throw std::out_of_range("Достигнут конец строки");
+        if (IsEndOfStream()) throw std::out_of_range("Достигнут конец строки (или поток закрыт)");
+        
         std::string ReadWord;
         if (InputStream >> ReadWord) {
             CurrentPosition++;
@@ -40,6 +50,8 @@ public:
     bool IsCanSeek() const override { return true; }
 
     size_t Seek(size_t TargetIndex) override {
+        if (IsClosedFlag) throw std::logic_error("Невозможно перемещаться по закрытому потоку");
+        
         InputStream.clear();
         InputStream.seekg(0, std::ios::beg);
         CurrentPosition = 0;

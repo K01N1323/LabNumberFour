@@ -1,7 +1,7 @@
 #include "ComplexSequences/BitSequence.h"
 #include <cstring>
 
-// ===================== Bit =====================
+
 
 // Конструктор по умолчанию или из значения bool
 Bit::Bit(bool v) : value(v) {}

@@ -42,13 +42,57 @@ private:
         }
         this->capacity = Ordinal(TotalOmega, TotalIndex);
     }
-
+    // для GetSubSequence
     LazySequence(Generator<ItemType>* ExistingGenerator, Ordinal NewCapacity) : generator(ExistingGenerator), cache(new MutableArraySequence<ItemType>()), capacity(NewCapacity) {
         this->ChunkList = new MutableArraySequence<LazySequence<ItemType>*>();
         this->ChunkList->Append(this);
         if (this->generator != nullptr) {
             this->generator->SetOwner(this);
         }
+    }
+
+    // всомагательный метод для гет из сконкаченных последовательностей
+    const ItemType& GetFromComposite(Ordinal TargetOrdinal) const {
+        int TargetInfinities = TargetOrdinal.omega;
+        int RemainingIndex = TargetOrdinal.index;
+
+        for (int index = 0; index < ChunkList->GetLength(); index++) {
+            LazySequence<ItemType>* CurrentChunk = ChunkList->Get(index);
+
+            if (TargetInfinities == 0) {
+                if (CurrentChunk->IsInfinite()) {
+                    return CurrentChunk->Get(Ordinal(0, RemainingIndex));
+                } else {
+                    int ChunkLength = CurrentChunk->GetLength();
+                    if (RemainingIndex < ChunkLength) {
+                        return CurrentChunk->Get(Ordinal(0, RemainingIndex));
+                    } else {
+                        RemainingIndex -= ChunkLength;
+                    }
+                }
+            } else {
+                if (CurrentChunk->IsInfinite()) {
+                    TargetInfinities--;
+                }
+            }
+        }
+        throw std::out_of_range("Ординал выходит за границы склеенной последовательности");
+    }
+
+    // вспомагательный метод для get из базовой последовательности 
+    const ItemType& GetFromBase(Ordinal TargetOrdinal) const {
+        if (TargetOrdinal.omega > 0) throw std::logic_error("Дельта больше нуля недопустима для одиночного чанка");
+        
+        if (!capacity.IsInfinite() && TargetOrdinal.index >= capacity.GetCount()) {
+            throw std::out_of_range("Индекс выходит за границы");
+        }
+
+        while (cache->GetLength() <= TargetOrdinal.index) {
+            if (generator == nullptr) throw std::logic_error("Генератор не инициализирован");
+            ItemType GeneratedValue = generator->GetNext();
+            const_cast<LazySequence<ItemType>*>(this)->cache->Append(GeneratedValue);
+        }
+        return cache->Get(TargetOrdinal.index);
     }
 
 public:
@@ -131,44 +175,12 @@ public:
 
     const ItemType& Get(Ordinal TargetOrdinal) const {
         if (generator == nullptr && cache == nullptr) {
-            int TargetInfinities = TargetOrdinal.omega;
-            int RemainingIndex = TargetOrdinal.index;
-
-            for (int index = 0; index < ChunkList->GetLength(); index++) {
-                LazySequence<ItemType>* CurrentChunk = ChunkList->Get(index);
-
-                if (TargetInfinities == 0) {
-                    if (CurrentChunk->IsInfinite()) {
-                        return CurrentChunk->Get(Ordinal(0, RemainingIndex));
-                    } else {
-                        int ChunkLength = CurrentChunk->GetLength();
-                        if (RemainingIndex < ChunkLength) {
-                            return CurrentChunk->Get(Ordinal(0, RemainingIndex));
-                        } else {
-                            RemainingIndex -= ChunkLength;
-                        }
-                    }
-                } else {
-                    if (CurrentChunk->IsInfinite()) {
-                        TargetInfinities--;
-                    }
-                }
-            }
-            throw std::out_of_range("Ординал выходит за границы склеенной последовательности");
+            return GetFromComposite(TargetOrdinal);
         }
        
-        if (TargetOrdinal.omega > 0) throw std::logic_error("Дельта больше нуля недопустима для одиночного чанка");
-        if (!capacity.IsInfinite() && TargetOrdinal.index >= capacity.GetCount()) {
-            throw std::out_of_range("Индекс выходит за границы");
-        }
-
-        while (cache->GetLength() <= TargetOrdinal.index) {
-            if (generator == nullptr) throw std::logic_error("Генератор не инициализирован");
-            ItemType GeneratedValue = generator->GetNext();
-            const_cast<LazySequence<ItemType>*>(this)->cache->Append(GeneratedValue);
-        }
-        return cache->Get(TargetOrdinal.index);
+        return GetFromBase(TargetOrdinal);
     }
+       
 
     const ItemType& Get(int TargetIndex) const override {
         return Get(Ordinal(0, TargetIndex)); 
@@ -217,12 +229,18 @@ public:
         return new LazyEnumerator(this);
     }
   
+    // 1. Диспетчер
     Sequence<ItemType>* Concat(Sequence<ItemType>* list) override {
         LazySequence<ItemType>* OtherLazy = dynamic_cast<LazySequence<ItemType>*>(list);
         if (OtherLazy) {
             return this->ConcatLazy(OtherLazy);
         }
-        
+    
+        return this->ConcatDefault(list);
+    }
+
+
+    Sequence<ItemType>* ConcatDefault(Sequence<ItemType>* list) const {
         auto ConcatRule = [this, list, LocalPosition = 0](Sequence<ItemType>* self) mutable -> ItemType {
             if (!this->IsInfinite() && LocalPosition >= this->capacity.GetCount()) {
                 int OffsetIndex = this->capacity.GetCount();
@@ -240,6 +258,7 @@ public:
         return new LazySequence<ItemType>(ConcatRule, NewCapacity);
     }
 
+    
     LazySequence<ItemType>* ConcatLazy(LazySequence<ItemType>* OtherSequence) const {
         MutableArraySequence<LazySequence<ItemType>*>* NewChunkList = new MutableArraySequence<LazySequence<ItemType>*>();
         
@@ -252,18 +271,13 @@ public:
         
         return new LazySequence<ItemType>(NewChunkList);
     }
+        
+    
 
     Sequence<ItemType>* Append(const ItemType& item) override {
-        if (generator != nullptr && !capacity.IsInfinite()) {
-            Generator<ItemType>* NextGenerator = generator->Append(item);
-            Ordinal NewCapacity = Ordinal(capacity.GetCount() + 1);
-            return new LazySequence<ItemType>(NextGenerator, NewCapacity);
-        } 
-        else {
-            ItemType SingleArray[1] = {item};
-            LazySequence<ItemType>* SingleElementSeq = new LazySequence<ItemType>(SingleArray, 1);
-            return this->ConcatLazy(SingleElementSeq);
-        }
+        if (IsInfinite()) throw std::logic_error("Нельзя добавить элемент в конец бесконечной последовательности");
+
+        return InsertAt(item, this->GetLength());
     }
 
     Sequence<ItemType>* InsertAt(const ItemType& item, int TargetIndex) override {

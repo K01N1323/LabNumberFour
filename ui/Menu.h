@@ -60,8 +60,8 @@ private:
             std::cout << "9. Вставить элемент по индексу (InsertAt)\n";
             std::cout << "10. Удалить элемент по индексу (RemoveAt)\n";
             std::cout << "11. Проверить получение крайних элементов (GetFirst / GetLast)\n";
-            std::cout << "12. Проверить Map (Умножить элементы на 10)\n";
-            std::cout << "13. Проверить Where (Оставить только четные)\n";
+            std::cout << "12. Проверить Map (Умножить элементы на 10 и сохранить)\n";
+            std::cout << "13. Проверить Where (Оставить только четные и сохранить)\n"; 
             std::cout << "14. Проверить Reduce (Сумма первых N элементов)\n";
             std::cout << "15. Проверить Zip (Сцепить с другой последовательностью из списка)\n";
             std::cout << "16. Проверить GetSubsequence (Получить подсписок)\n";
@@ -180,7 +180,7 @@ private:
                         
                         SequenceCollection->Append(static_cast<LazySequence<int>*>(MutatedSequence));
                         ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
-                        std::cout << "Элемент успешно добавлен. Результат сохранен как новая активная последовательность (иммутабельность сохранена)\n";
+                        std::cout << "Элемент успешно добавлен в конец. Результат сохранен как новая активная последовательность\n";
                         break;
                     }
                     case 9: {
@@ -219,32 +219,30 @@ private:
                         }
                         break;
                     }
-                    case 12: {
+                    case 12: { 
                         if (ActiveSequenceIndex == -1) { std::cout << "Нет активной последовательности\n"; break; }
                         auto MultiplyByTen = [](const int& CurrentValue) -> int { return CurrentValue * 10; };
                         LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
                         LazySequence<int>* MappedSequence = CurrentSequence->Map<int>(MultiplyByTen);
                         
-                        std::cout << "Первые 5 элементов после применения Map: ";
-                        for (int PrintIndex = 0; PrintIndex < 5; PrintIndex++) {
-                            std::cout << MappedSequence->Get(PrintIndex) << " ";
-                        }
-                        std::cout << "\n";
-                        delete MappedSequence;
+                        SequenceCollection->Append(MappedSequence);
+                        ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
+                        
+                        std::cout << "Map (умножение на 10) успешно применен.\n";
+                        std::cout << "Результат сохранен как новая активная последовательность!\n";
                         break;
                     }
-                    case 13: {
+                    case 13: { 
                         if (ActiveSequenceIndex == -1) { std::cout << "Нет активной последовательности\n"; break; }
                         auto IsEven = [](const int& CurrentValue) -> bool { return CurrentValue % 2 == 0; };
                         LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
                         LazySequence<int>* FilteredSequence = CurrentSequence->Where(IsEven);
                         
-                        std::cout << "Первые 5 четных элементов после применения Where: ";
-                        for (int PrintIndex = 0; PrintIndex < 5; PrintIndex++) {
-                            std::cout << FilteredSequence->Get(PrintIndex) << " ";
-                        }
-                        std::cout << "\n";
-                        delete FilteredSequence;
+                        SequenceCollection->Append(FilteredSequence);
+                        ActiveSequenceIndex = SequenceCollection->GetLength() - 1;
+                        
+                        std::cout << "Where (только четные) успешно применен.\n";
+                        std::cout << "Результат (бесконечный генератор четных) сохранен как новая активная последовательность!\n";
                         break;
                     }
                     case 14: {
@@ -275,11 +273,19 @@ private:
                             LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
                             LazySequence<int>* SecondSequence = SequenceCollection->Get(SecondTargetIndex);
                             
+                            int PrintCount;
+                            std::cout << "Сколько пар вывести на экран? ";
+                            std::cin >> PrintCount;
+
                             auto ZippedSequence = CurrentSequence->Zip(SecondSequence);
-                            std::cout << "Первые 5 пар после применения Zip:\n";
-                            for (int PrintIndex = 0; PrintIndex < 5; PrintIndex++) {
-                                auto CurrentPair = ZippedSequence->Get(PrintIndex);
-                                std::cout << CurrentPair.first << " и " << CurrentPair.second << "\n";
+                            std::cout << "Результат применения Zip:\n";
+                            try {
+                                for (int PrintIndex = 0; PrintIndex < PrintCount; PrintIndex++) {
+                                    auto CurrentPair = ZippedSequence->Get(PrintIndex);
+                                    std::cout << "[" << PrintIndex << "]: " << CurrentPair.first << " | " << CurrentPair.second << "\n";
+                                }
+                            } catch (const std::out_of_range&) {
+                                std::cout << "(Достигнут конец одной из последовательностей)\n";
                             }
                             delete ZippedSequence;
                         } else {
@@ -330,7 +336,7 @@ private:
                             std::cout << "Последовательности объединены. Результат сохранен как новая активная последовательность\n";
                             
                             int ChunkDelta, LocalIndex;
-                            std::cout << "Введите дельту для чанка проверки: ";
+                            std::cout << "Введите дельту для чанка проверки (omega): ";
                             std::cin >> ChunkDelta;
                             std::cout << "Введите локальный индекс в выбранном чанке: ";
                             std::cin >> LocalIndex;
@@ -385,8 +391,8 @@ private:
                         FileTargetStream.Write(200);
                         FileTargetStream.Write(300);
                         
-                        FileTargetStream.Close();
-                        std::cout << "Данные успешно сохранены в файл\n";
+                        FileTargetStream.Close(); 
+                        std::cout << "Данные успешно сохранены в файл, поток закрыт\n";
                         break;
                     }
                     case 2: {
@@ -405,7 +411,7 @@ private:
                                 break;
                             }
                         }
-                        FileSourceStream.Close();
+                        FileSourceStream.Close(); 
                         break;
                     }
                     case 3: {
@@ -416,6 +422,7 @@ private:
                         
                         auto IntegerDeserializer = [](const std::string& ParsedText) -> int { return std::stoi(ParsedText); };
                         ReadOnlyStream<int> StringSourceStream(InputText, IntegerDeserializer);
+                        StringSourceStream.Open();
                         
                         std::cout << "Чтение значений из строкового потока:\n";
                         while (!StringSourceStream.IsEndOfStream()) {
@@ -426,17 +433,20 @@ private:
                                 break;
                             }
                         }
+                        StringSourceStream.Close();
                         break;
                     }
                     case 4: {
                         std::string TestText = "11 22 33 44 55";
                         auto IntegerDeserializer = [](const std::string& ParsedText) -> int { return std::stoi(ParsedText); };
                         ReadOnlyStream<int> StringSeekStream(TestText, IntegerDeserializer);
+                        StringSeekStream.Open();
                         
                         std::cout << "Исходная строка для теста каретки: " << TestText << "\n";
                         std::cout << "Перемещаем каретку на индекс 3\n";
                         StringSeekStream.Seek(3);
                         std::cout << "Прочитанное значение должно быть 44. Фактическое значение: " << StringSeekStream.Read() << "\n";
+                        StringSeekStream.Close();
                         break;
                     }
                     case 5: { 
@@ -444,17 +454,25 @@ private:
                         
                         LazySequence<int>* CurrentSequence = SequenceCollection->Get(ActiveSequenceIndex);
                         ReadOnlyStream<int> SequenceReadStream(CurrentSequence);
-                        SequenceReadStream.Open();
+                        SequenceReadStream.Open(); 
                         
                         int ElementsToRead;
                         std::cout << "Количество элементов для чтения из потока: ";
                         std::cin >> ElementsToRead;
 
                         for (int ReadIndex = 0; ReadIndex < ElementsToRead; ReadIndex++) {
-                            if (SequenceReadStream.IsEndOfStream()) break;
+                            if (SequenceReadStream.IsEndOfStream()) {
+                                std::cout << "Достигнут конец последовательности\n";
+                                break;
+                            }
                             std::cout << "Прочитано потоком: " << SequenceReadStream.Read() << " текущая позиция " << SequenceReadStream.GetPosition() << "\n";
                         }
+                        
+                        std::cout << "Принудительное закрытие потока... ";
                         SequenceReadStream.Close();
+                        if (SequenceReadStream.IsEndOfStream()) {
+                            std::cout << "Успех! Поток сигнализирует о завершении (EOF).\n";
+                        }
                         break;
                     }
                     case 6: { 
@@ -466,9 +484,16 @@ private:
                         SequenceWriteStream.Write(77);
                         SequenceWriteStream.Write(88);
                         SequenceWriteStream.Write(99);
-                        SequenceWriteStream.Close();
+                        SequenceWriteStream.Close(); 
 
-                        std::cout << "Проверка состояния базового массива: ";
+                        std::cout << "Попытка записать значение 100 в закрытый поток...\n";
+                        try {
+                            SequenceWriteStream.Write(100);
+                        } catch (const std::exception& e) {
+                            std::cout << "Перехвачено исключение (как и ожидалось): " << e.what() << "\n";
+                        }
+
+                        std::cout << "Проверка состояния базового массива (должно быть только 77 88 99): ";
                         for (int ArrayElementIndex = 0; ArrayElementIndex < DynamicTargetArray.GetLength(); ArrayElementIndex++) {
                             std::cout << DynamicTargetArray.Get(ArrayElementIndex) << " ";
                         }
@@ -508,10 +533,12 @@ private:
                         
                         auto StringDeserializer = [](const std::string& ParsedWord) -> std::string { return ParsedWord; };
                         ReadOnlyStream<std::string> StringStreamSource(InputText, StringDeserializer);
+                        StringStreamSource.Open();
                         
                         delete ActiveIndex;
                         ActiveIndex = new AlphabeticalIndex();
                         ActiveIndex->BuildFromStream(&StringStreamSource);
+                        StringStreamSource.Close();
                         std::cout << "Алфавитный указатель успешно построен\n";
                         break;
                     }

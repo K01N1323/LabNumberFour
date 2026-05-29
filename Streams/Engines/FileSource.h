@@ -55,7 +55,6 @@ public:
         if (!InputFileStream.is_open()) throw std::logic_error("Поток не открыт");
         InputFileStream.clear();
         
-        // за о(1) тк seekg делает смещение в байтах
         InputFileStream.seekg(TargetIndex, std::ios::beg);
         if (InputFileStream.fail()) throw std::out_of_range("Смещение выходит за границы файла");
         
